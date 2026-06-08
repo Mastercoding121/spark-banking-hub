@@ -1,15 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
-import { submitLoanApplication } from "@/lib/finance.functions";
+import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
     meta: [
       { title: "Loans — Firestone Bank of USA" },
-      { name: "description", content: "Apply for personal, auto, mortgage, student, business, or home equity loans with competitive APR." },
+      { name: "description", content: "Apply for personal, auto, mortgage, student, business, or home equity loans and track your application status live." },
     ],
   }),
   component: LoansPage,
@@ -21,7 +21,7 @@ type LoanProduct = {
   apr: number;
   minAmount: number;
   maxAmount: number;
-  terms: number[]; // months
+  terms: number[];
   blurb: string;
 };
 
@@ -40,17 +40,104 @@ function monthlyPayment(p: number, aprPct: number, months: number) {
   return (p * r) / (1 - Math.pow(1 + r, -months));
 }
 
+const STEPS: LoanStatus[] = ["submitted", "underwriting", "approved"];
+const STEP_LABEL: Record<LoanStatus, string> = {
+  submitted: "Submitted",
+  underwriting: "Underwriting",
+  approved: "Approved",
+};
+
+function StatusTracker({ referenceId }: { referenceId: string }) {
+  const fetchStatus = useServerFn(getLoanStatus);
+  const statusQuery = useQuery({
+    queryKey: ["loan-status", referenceId],
+    queryFn: () => fetchStatus({ data: { referenceId } }),
+    refetchInterval: 5_000,
+  });
+
+  const result = statusQuery.data;
+  if (!result) return <div className="text-xs text-slate-500">Loading status…</div>;
+  if ("error" in result) return <div className="text-xs text-red-700">{result.error}</div>;
+
+  const app = result.application;
+  const currentIdx = STEPS.indexOf(app.status);
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-slate-500">Application</div>
+          <div className="text-lg font-bold">{app.referenceId}</div>
+        </div>
+        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+          {STEP_LABEL[app.status]}
+        </span>
+      </div>
+
+      <div className="mt-5">
+        <div className="flex items-center justify-between">
+          {STEPS.map((step, i) => {
+            const done = i <= currentIdx;
+            const active = i === currentIdx;
+            return (
+              <div key={step} className="flex flex-1 flex-col items-center">
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+                    done ? "bg-red-700 text-white" : "bg-slate-100 text-slate-400"
+                  } ${active ? "ring-4 ring-red-200" : ""}`}
+                >
+                  {done ? "✓" : i + 1}
+                </div>
+                <div className={`mt-2 text-[11px] font-medium ${done ? "text-slate-900" : "text-slate-400"}`}>
+                  {STEP_LABEL[step]}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="relative -mt-9 mx-9 h-1 rounded-full bg-slate-100">
+          <div
+            className="h-1 rounded-full bg-red-700 transition-all"
+            style={{ width: `${(currentIdx / (STEPS.length - 1)) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Activity</div>
+        {app.history.slice().reverse().map((h, i) => (
+          <div key={i} className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-xs">
+            <div className="flex justify-between">
+              <span className="font-semibold">{STEP_LABEL[h.status]}</span>
+              <span className="text-slate-500">{new Date(h.at).toLocaleString()}</span>
+            </div>
+            <div className="mt-1 text-slate-600">{h.note}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+        <div className="rounded-md bg-slate-50 p-2"><div className="text-slate-500">Amount</div><div className="font-semibold">${app.amount.toLocaleString()}</div></div>
+        <div className="rounded-md bg-slate-50 p-2"><div className="text-slate-500">Term</div><div className="font-semibold">{app.termMonths} mo</div></div>
+      </div>
+    </div>
+  );
+}
+
 function LoansPage() {
   const [selected, setSelected] = useState<LoanProduct>(PRODUCTS[0]);
   const [amount, setAmount] = useState(10000);
   const [term, setTerm] = useState(PRODUCTS[0].terms[2]);
   const [fullName, setFullName] = useState("John Doe");
   const [email, setEmail] = useState("john.doe@example.com");
+  const [trackedRef, setTrackedRef] = useState<string | null>(null);
+  const [lookup, setLookup] = useState("");
 
   const apply = useServerFn(submitLoanApplication);
   const mutation = useMutation({
     mutationFn: (vars: { productId: string; amount: number; termMonths: number; fullName: string; email: string }) =>
       apply({ data: vars }),
+    onSuccess: (res) => setTrackedRef(res.referenceId),
   });
 
   const payment = useMemo(() => monthlyPayment(amount, selected.apr, term), [amount, selected.apr, term]);
@@ -67,7 +154,7 @@ function LoansPage() {
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
         <div>
           <h1 className="text-2xl font-bold">Loans & Lending</h1>
-          <p className="text-sm text-slate-600">Pick a product, customize your terms, and apply in under 2 minutes.</p>
+          <p className="text-sm text-slate-600">Pick a product, customize your terms, apply, and track your application in real time.</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -76,9 +163,7 @@ function LoansPage() {
               key={p.id}
               onClick={() => handleSelect(p)}
               className={`rounded-xl border p-5 text-left transition ${
-                selected.id === p.id
-                  ? "border-red-600 bg-red-50 ring-2 ring-red-600/20"
-                  : "border-slate-200 bg-white hover:border-slate-400"
+                selected.id === p.id ? "border-red-600 bg-red-50 ring-2 ring-red-600/20" : "border-slate-200 bg-white hover:border-slate-400"
               }`}
             >
               <div className="flex items-baseline justify-between">
@@ -87,9 +172,7 @@ function LoansPage() {
               </div>
               <div className="mt-1 text-2xl font-bold text-red-700">{p.apr.toFixed(2)}% <span className="text-xs font-medium text-slate-500">APR</span></div>
               <p className="mt-2 text-xs text-slate-600">{p.blurb}</p>
-              <div className="mt-3 text-[11px] text-slate-500">
-                ${p.minAmount.toLocaleString()} – ${p.maxAmount.toLocaleString()}
-              </div>
+              <div className="mt-3 text-[11px] text-slate-500">${p.minAmount.toLocaleString()} – ${p.maxAmount.toLocaleString()}</div>
             </button>
           ))}
         </div>
@@ -97,7 +180,6 @@ function LoansPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold">Customize: {selected.name}</h2>
-
             <label className="block text-sm">
               <div className="mb-1 flex justify-between"><span className="text-slate-600">Loan amount</span><span className="font-semibold">${amount.toLocaleString()}</span></div>
               <input
@@ -154,12 +236,6 @@ function LoansPage() {
               <button disabled={mutation.isPending} className="w-full rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-sm font-semibold text-white hover:from-red-800 hover:to-red-900 disabled:opacity-60">
                 {mutation.isPending ? "Submitting…" : "Submit Application"}
               </button>
-
-              {mutation.data?.ok && (
-                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                  ✓ {mutation.data.message} <br /> Reference: <strong>{mutation.data.referenceId}</strong>
-                </div>
-              )}
               {mutation.isError && (
                 <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                   {(mutation.error as Error).message}
@@ -168,6 +244,32 @@ function LoansPage() {
             </form>
           </section>
         </div>
+
+        {/* Status tracker */}
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 className="text-lg font-semibold">Application Status</h2>
+            <form
+              onSubmit={(e) => { e.preventDefault(); if (lookup.trim()) setTrackedRef(lookup.trim().toUpperCase()); }}
+              className="flex gap-2"
+            >
+              <input
+                value={lookup}
+                onChange={(e) => setLookup(e.target.value)}
+                placeholder="Reference ID (LN-…)"
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button className="rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800">Track</button>
+            </form>
+          </div>
+          {trackedRef ? (
+            <StatusTracker referenceId={trackedRef} />
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+              Submit an application or enter a reference ID to see live status: Submitted → Underwriting → Approved.
+            </div>
+          )}
+        </section>
       </main>
     </BankShell>
   );
