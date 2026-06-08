@@ -48,7 +48,10 @@ function LoansPage() {
   const [email, setEmail] = useState("john.doe@example.com");
 
   const apply = useServerFn(submitLoanApplication);
-  const mutation = useMutation({ mutationFn: (vars: Parameters<typeof apply>[0]) => apply(vars) });
+  const mutation = useMutation({
+    mutationFn: (vars: { productId: string; amount: number; termMonths: number; fullName: string; email: string }) =>
+      apply({ data: vars }),
+  });
 
   const payment = useMemo(() => monthlyPayment(amount, selected.apr, term), [amount, selected.apr, term]);
   const totalCost = payment * term;
