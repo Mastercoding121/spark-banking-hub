@@ -1,19 +1,131 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BankShell } from "@/components/BankShell";
-import { submitSupportMessage } from "@/lib/finance.functions";
+import { chatWithBot, submitSupportMessage } from "@/lib/finance.functions";
 
 export const Route = createFileRoute("/support")({
   head: () => ({
     meta: [
       { title: "24/7 Customer Support — Firestone Bank of USA" },
-      { name: "description", content: "Get help any time of day. Call, chat, or message our support team — available 24/7." },
+      { name: "description", content: "Chat instantly with Ember, our 24/7 banking assistant, or open a ticket. We answer any time of day." },
     ],
   }),
   component: SupportPage,
 });
+
+const SUPPORT_EMAIL = "support@firestonebank.us";
+
+type ChatMessage = { id: string; role: "bot" | "user"; text: string; at: string };
+
+function SupportBot() {
+  const send = useServerFn(chatWithBot);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      role: "bot",
+      text: `Hi, I'm Ember — Firestone's 24/7 virtual assistant. Ask me anything about your account, transfers, loans, or investments. For anything I can't resolve, I'll direct you to ${SUPPORT_EMAIL}.`,
+      at: new Date().toISOString(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const mutation = useMutation({
+    mutationFn: (msg: string) => send({ data: { message: msg } }),
+    onSuccess: (res) => {
+      setMessages((m) => [...m, { id: `b-${Date.now()}`, role: "bot", text: res.reply, at: res.at }]);
+    },
+  });
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, mutation.isPending]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || mutation.isPending) return;
+    setMessages((m) => [...m, { id: `u-${Date.now()}`, role: "user", text, at: new Date().toISOString() }]);
+    setInput("");
+    mutation.mutate(text);
+  };
+
+  const quickPrompts = ["My card was stolen", "I see a fraudulent charge", "Reset my password", "What are your hours?"];
+
+  return (
+    <section className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-3">
+        <div className="relative">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-700 text-sm font-bold text-white">E</div>
+          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+        </div>
+        <div>
+          <div className="text-sm font-semibold">Ember · Virtual Assistant</div>
+          <div className="text-[11px] text-emerald-600">Online · responds instantly</div>
+        </div>
+      </div>
+
+      <div ref={scrollRef} className="h-80 overflow-y-auto px-5 py-4 space-y-3 bg-slate-50">
+        {messages.map((m) => (
+          <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
+              m.role === "user" ? "bg-red-700 text-white rounded-br-sm" : "bg-white text-slate-800 border border-slate-200 rounded-bl-sm"
+            }`}>
+              {m.text.split(SUPPORT_EMAIL).map((part, i, arr) => (
+                <span key={i}>
+                  {part}
+                  {i < arr.length - 1 && (
+                    <a href={`mailto:${SUPPORT_EMAIL}`} className={`underline font-medium ${m.role === "user" ? "text-amber-200" : "text-red-700"}`}>
+                      {SUPPORT_EMAIL}
+                    </a>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+        {mutation.isPending && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl rounded-bl-sm bg-white border border-slate-200 px-3 py-2 text-sm text-slate-500">
+              <span className="inline-flex gap-1">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 px-5 py-2">
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {quickPrompts.map((p) => (
+            <button
+              key={p}
+              onClick={() => { setInput(p); }}
+              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600 hover:border-red-300 hover:text-red-700"
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <form onSubmit={submit} className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message…"
+            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+          <button disabled={mutation.isPending || !input.trim()} className="rounded-md bg-gradient-to-r from-red-700 to-red-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            Send
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
 
 function SupportPage() {
   const send = useServerFn(submitSupportMessage);
@@ -31,24 +143,25 @@ function SupportPage() {
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
         <div>
           <h1 className="text-2xl font-bold">24/7 Customer Support</h1>
-          <p className="text-sm text-slate-600">We're here around the clock. Pick the fastest way to reach us.</p>
+          <p className="text-sm text-slate-600">Chat with our assistant Ember instantly. Anything urgent gets routed to <a className="text-red-700 underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <ContactTile icon="☎" label="Call us" value="1-800-FIRESTONE" sub="Toll-free, 24/7" />
-          <ContactTile icon="✉" label="Email" value="support@firestonebank.us" sub="Replies in &lt; 2 hours" />
-          <ContactTile icon="💬" label="Live chat" value="Start chat" sub="Avg wait: 38 seconds" />
+          <ContactTile icon="✉" label="Email" value={SUPPORT_EMAIL} sub="Replies in &lt; 2 hours" href={`mailto:${SUPPORT_EMAIL}`} />
+          <ContactTile icon="💬" label="Live chat" value="Talk to Ember" sub="Avg reply: instant" />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-            <h2 className="mb-4 text-lg font-semibold">Send us a message</h2>
+          <div className="lg:col-span-2">
+            <SupportBot />
+          </div>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">Open a Ticket</h2>
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                mutation.mutate({ name, email, topic, message });
-              }}
-              className="grid gap-3 text-sm sm:grid-cols-2"
+              onSubmit={(e) => { e.preventDefault(); mutation.mutate({ name, email, topic, message }); }}
+              className="space-y-3 text-sm"
             >
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-slate-600">Name</span>
@@ -58,7 +171,7 @@ function SupportPage() {
                 <span className="mb-1 block text-xs font-medium text-slate-600">Email</span>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2" required />
               </label>
-              <label className="sm:col-span-2 block">
+              <label className="block">
                 <span className="mb-1 block text-xs font-medium text-slate-600">Topic</span>
                 <select value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2">
                   <option>Account access</option>
@@ -70,49 +183,35 @@ function SupportPage() {
                   <option>Other</option>
                 </select>
               </label>
-              <label className="sm:col-span-2 block">
+              <label className="block">
                 <span className="mb-1 block text-xs font-medium text-slate-600">Message</span>
-                <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={5} className="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="How can we help?" required />
+                <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} className="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="How can we help?" required />
               </label>
-              <button disabled={mutation.isPending} className="sm:col-span-2 rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-sm font-semibold text-white hover:from-red-800 hover:to-red-900 disabled:opacity-60">
-                {mutation.isPending ? "Sending…" : "Open a Support Ticket"}
+              <button disabled={mutation.isPending} className="w-full rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-sm font-semibold text-white hover:from-red-800 hover:to-red-900 disabled:opacity-60">
+                {mutation.isPending ? "Sending…" : "Open Ticket"}
               </button>
               {mutation.data?.ok && (
-                <div className="sm:col-span-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                  ✓ {mutation.data.message}
-                </div>
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">✓ {mutation.data.message}</div>
               )}
               {mutation.isError && (
-                <div className="sm:col-span-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-                  {(mutation.error as Error).message}
-                </div>
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{(mutation.error as Error).message}</div>
               )}
             </form>
           </section>
-
-          <aside className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold">Quick help</h3>
-            <ul className="space-y-2 text-sm">
-              <li className="rounded-md bg-slate-50 px-3 py-2">Report a lost or stolen card</li>
-              <li className="rounded-md bg-slate-50 px-3 py-2">Dispute a transaction</li>
-              <li className="rounded-md bg-slate-50 px-3 py-2">Reset online banking password</li>
-              <li className="rounded-md bg-slate-50 px-3 py-2">Order checks</li>
-              <li className="rounded-md bg-slate-50 px-3 py-2">Wire transfer instructions</li>
-            </ul>
-          </aside>
         </div>
       </main>
     </BankShell>
   );
 }
 
-function ContactTile({ icon, label, value, sub }: { icon: string; label: string; value: string; sub: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+function ContactTile({ icon, label, value, sub, href }: { icon: string; label: string; value: string; sub: string; href?: string }) {
+  const inner = (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-red-300">
       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-xl text-red-700">{icon}</div>
       <div className="mt-3 text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="text-lg font-bold">{value}</div>
+      <div className="text-lg font-bold break-all">{value}</div>
       <div className="text-xs text-slate-500" dangerouslySetInnerHTML={{ __html: sub }} />
     </div>
   );
+  return href ? <a href={href}>{inner}</a> : inner;
 }
