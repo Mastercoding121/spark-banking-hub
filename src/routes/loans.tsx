@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
+import { loanRefStore, useLoanRefs } from "@/lib/store";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
@@ -134,10 +135,11 @@ function LoansPage() {
   const [lookup, setLookup] = useState("");
 
   const apply = useServerFn(submitLoanApplication);
+  const myRefs = useLoanRefs();
   const mutation = useMutation({
     mutationFn: (vars: { productId: string; amount: number; termMonths: number; fullName: string; email: string }) =>
       apply({ data: vars }),
-    onSuccess: (res) => setTrackedRef(res.referenceId),
+    onSuccess: (res) => { setTrackedRef(res.referenceId); loanRefStore.add(res.referenceId); },
   });
 
   const payment = useMemo(() => monthlyPayment(amount, selected.apr, term), [amount, selected.apr, term]);
@@ -270,6 +272,22 @@ function LoansPage() {
             </div>
           )}
         </section>
+
+        {myRefs.length > 0 && (
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">My Applications</h2>
+            <ul className="divide-y divide-slate-100">
+              {myRefs.map((r) => (
+                <li key={r} className="flex items-center justify-between py-2 text-sm">
+                  <span className="font-mono text-xs">{r}</span>
+                  <Link to="/loans/$id" params={{ id: r }} className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:border-red-300 hover:text-red-700">
+                    View details →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </BankShell>
   );

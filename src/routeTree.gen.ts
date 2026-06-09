@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoansIdRouteImport } from './routes/loans_.$id'
 
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
@@ -29,44 +31,75 @@ const InvestmentsRoute = InvestmentsRouteImport.update({
   path: '/investments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoansIdRoute = LoansIdRouteImport.update({
+  id: '/loans_/$id',
+  path: '/loans/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
   '/support': typeof SupportRoute
+  '/loans/$id': typeof LoansIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
   '/support': typeof SupportRoute
+  '/loans/$id': typeof LoansIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
   '/support': typeof SupportRoute
+  '/loans_/$id': typeof LoansIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/investments' | '/loans' | '/support'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/investments'
+    | '/loans'
+    | '/support'
+    | '/loans/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/investments' | '/loans' | '/support'
-  id: '__root__' | '/' | '/investments' | '/loans' | '/support'
+  to: '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/investments'
+    | '/loans'
+    | '/support'
+    | '/loans_/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRoute
   InvestmentsRoute: typeof InvestmentsRoute
   LoansRoute: typeof LoansRoute
   SupportRoute: typeof SupportRoute
+  LoansIdRoute: typeof LoansIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvestmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -99,14 +139,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/loans_/$id': {
+      id: '/loans_/$id'
+      path: '/loans/$id'
+      fullPath: '/loans/$id'
+      preLoaderRoute: typeof LoansIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRoute,
   InvestmentsRoute: InvestmentsRoute,
   LoansRoute: LoansRoute,
   SupportRoute: SupportRoute,
+  LoansIdRoute: LoansIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
