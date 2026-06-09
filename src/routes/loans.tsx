@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
+import { loanRefStore, useLoanRefs } from "@/lib/store";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
@@ -134,10 +135,11 @@ function LoansPage() {
   const [lookup, setLookup] = useState("");
 
   const apply = useServerFn(submitLoanApplication);
+  const myRefs = useLoanRefs();
   const mutation = useMutation({
     mutationFn: (vars: { productId: string; amount: number; termMonths: number; fullName: string; email: string }) =>
       apply({ data: vars }),
-    onSuccess: (res) => setTrackedRef(res.referenceId),
+    onSuccess: (res) => { setTrackedRef(res.referenceId); loanRefStore.add(res.referenceId); },
   });
 
   const payment = useMemo(() => monthlyPayment(amount, selected.apr, term), [amount, selected.apr, term]);
