@@ -51,7 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
-  '/loans': typeof LoansRouteWithChildren
+  '/loans': typeof LoansRoute
   '/support': typeof SupportRoute
   '/loans/$id': typeof LoansIdRoute
 }
@@ -59,7 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
-  '/loans': typeof LoansRouteWithChildren
+  '/loans': typeof LoansRoute
   '/support': typeof SupportRoute
   '/loans/$id': typeof LoansIdRoute
 }
@@ -68,31 +68,27 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
-  '/loans': typeof LoansRouteWithChildren
+  '/loans': typeof LoansRoute
   '/support': typeof SupportRoute
   '/loans/$id': typeof LoansIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/dashboard'
-    | '/investments'
-    | '/loans'
-    | '/support'
-    | '/loans/$id'
+  fullPaths: '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
-  id:
-    | '__root__'
-    | '/'
-    | '/dashboard'
-    | '/investments'
-    | '/loans'
-    | '/support'
-    | '/loans/$id'
+  id: '__root__' | '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
   fileRoutesById: FileRoutesById
 }
+
+interface LoansRouteChildren {
+  LoansIdRoute: typeof LoansIdRoute
+}
+const LoansRouteChildren: LoansRouteChildren = {
+  LoansIdRoute: LoansIdRoute,
+}
+const LoansRouteWithChildren = LoansRoute._addFileChildren(LoansRouteChildren)
+
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
@@ -147,16 +143,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface LoansRouteChildren {
-  LoansIdRoute: typeof LoansIdRoute
-}
-
-const LoansRouteChildren: LoansRouteChildren = {
-  LoansIdRoute: LoansIdRoute,
-}
-
-const LoansRouteWithChildren = LoansRoute._addFileChildren(LoansRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
