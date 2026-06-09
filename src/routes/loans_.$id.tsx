@@ -10,7 +10,7 @@ import {
   type LoanStatus,
 } from "@/lib/finance.functions";
 
-export const Route = createFileRoute("/loans/$id")({
+export const Route = createFileRoute("/loans_/$id")({
   head: () => ({
     meta: [
       { title: "Loan Application Details — Firestone Bank of USA" },

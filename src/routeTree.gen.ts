@@ -14,7 +14,7 @@ import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as LoansIdRouteImport } from './routes/loans.$id'
+import { Route as LoansIdRouteImport } from './routes/loans_.$id'
 
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
@@ -42,9 +42,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoansIdRoute = LoansIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => LoansRoute,
+  id: '/loans_/$id',
+  path: '/loans/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -70,31 +70,36 @@ export interface FileRoutesById {
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
   '/support': typeof SupportRoute
-  '/loans/$id': typeof LoansIdRoute
+  '/loans_/$id': typeof LoansIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/investments'
+    | '/loans'
+    | '/support'
+    | '/loans/$id'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
-  id: '__root__' | '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/investments'
+    | '/loans'
+    | '/support'
+    | '/loans_/$id'
   fileRoutesById: FileRoutesById
 }
-
-interface LoansRouteChildren {
-  LoansIdRoute: typeof LoansIdRoute
-}
-const LoansRouteChildren: LoansRouteChildren = {
-  LoansIdRoute: LoansIdRoute,
-}
-const LoansRouteWithChildren = LoansRoute._addFileChildren(LoansRouteChildren)
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   InvestmentsRoute: typeof InvestmentsRoute
-  LoansRoute: typeof LoansRouteWithChildren
+  LoansRoute: typeof LoansRoute
   SupportRoute: typeof SupportRoute
+  LoansIdRoute: typeof LoansIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -134,12 +139,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/loans/$id': {
-      id: '/loans/$id'
-      path: '/$id'
+    '/loans_/$id': {
+      id: '/loans_/$id'
+      path: '/loans/$id'
       fullPath: '/loans/$id'
       preLoaderRoute: typeof LoansIdRouteImport
-      parentRoute: typeof LoansRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -148,9 +153,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   InvestmentsRoute: InvestmentsRoute,
-  LoansRoute: LoansRouteWithChildren,
+  LoansRoute: LoansRoute,
   SupportRoute: SupportRoute,
+  LoansIdRoute: LoansIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
