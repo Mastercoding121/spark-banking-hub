@@ -1,265 +1,143 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { BankShell } from "@/components/BankShell";
-import { TRANSACTIONS, CATEGORIES } from "@/lib/transactions";
-import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { holderStore, useHolder } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Firestone Bank of USA - Online Banking" },
-      { name: "description", content: "Manage accounts, transfer funds, apply for loans, and trade investments with Firestone Bank of USA." },
+      { title: "Firestone Bank of USA — Secure Online Banking" },
+      { name: "description", content: "Welcome to Firestone Bank of USA. Sign in to manage accounts, transfer funds, apply for loans, and invest." },
     ],
   }),
-  component: Dashboard,
+  component: Landing,
 });
 
-type TransferMethod = "internal" | "ach" | "zelle" | "applepay" | "chime";
+function Landing() {
+  const navigate = useNavigate();
+  const holder = useHolder();
+  const [name, setName] = useState(holder);
 
-function Dashboard() {
-  const [method, setMethod] = useState<TransferMethod>("internal");
-  const [amount, setAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
-  const [routing, setRouting] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
-
-  // Transaction filter state
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
-  const [type, setType] = useState<"all" | "credit" | "debit">("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-
-  const filtered = useMemo(() => {
-    return TRANSACTIONS.filter((t) => {
-      if (query && !t.description.toLowerCase().includes(query.toLowerCase())) return false;
-      if (category !== "All" && t.category !== category) return false;
-      if (type === "credit" && t.amount <= 0) return false;
-      if (type === "debit" && t.amount >= 0) return false;
-      if (from && t.date < from) return false;
-      if (to && t.date > to) return false;
-      return true;
-    });
-  }, [query, category, type, from, to]);
-
-  const chime = useServerFn(sendChimeTransfer);
-  const applepay = useServerFn(initiateApplePay);
-  const chimeMut = useMutation({ mutationFn: (v: { cashtag: string; amount: number }) => chime({ data: v }) });
-  const applepayMut = useMutation({ mutationFn: (v: { amount: number }) => applepay({ data: v }) });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = Number(amount);
-    if (!amt || amt <= 0) return setStatus("Please enter a valid amount.");
-    setStatus(null);
-    if (method === "chime") {
-      chimeMut.mutate(
-        { cashtag: recipient, amount: amt },
-        { onSuccess: (r) => setStatus(`${r.message} · ${r.eta} · ${r.transferId}`), onError: (e) => setStatus((e as Error).message) },
-      );
-    } else if (method === "applepay") {
-      applepayMut.mutate(
-        { amount: amt },
-        { onSuccess: (r) => setStatus(`${r.message} · Session ${r.sessionId}`), onError: (e) => setStatus((e as Error).message) },
-      );
-    } else {
-      setStatus(`Transfer of $${amt.toFixed(2)} initiated via ${labelFor(method)}.`);
-    }
+    if (!name.trim()) return;
+    holderStore.set(name.trim());
+    navigate({ to: "/dashboard" });
   };
 
   return (
-    <BankShell>
-      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
-        <section>
-          <h1 className="mb-3 text-lg font-semibold">Account Summary</h1>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <AccountCard name="Firestone Checking" mask="4829" balance="$5,842.20" />
-            <AccountCard name="Firestone Growth Savings" mask="9104" balance="$24,150.85" sub="APY: 4.25%" />
+    <div className="relative min-h-screen overflow-hidden bg-slate-900 font-sans text-white">
+      {/* Bank background: layered gradients, columns, marble */}
+      <div
+        className="absolute inset-0 -z-10 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?auto=format&fit=crop&w=1920&q=70')",
+        }}
+      />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-red-950/90 via-slate-950/85 to-slate-900/90" />
+      <div className="absolute inset-0 -z-10 opacity-30 [background-image:radial-gradient(circle_at_20%_30%,rgba(251,191,36,0.25),transparent_45%),radial-gradient(circle_at_80%_70%,rgba(220,38,38,0.35),transparent_45%)]" />
+
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5">
+        <div className="flex items-center gap-3">
+          <BigLogo />
+          <div className="leading-tight">
+            <div className="text-xl font-bold tracking-tight">FIRESTONE</div>
+            <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA · Since 1892</div>
           </div>
-        </section>
+        </div>
+        <div className="hidden gap-5 text-xs font-medium opacity-90 md:flex">
+          <span>FDIC Insured</span><span>Equal Housing Lender</span><span>256-bit SSL</span>
+        </div>
+      </header>
 
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Quick Services</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <LinkTile to="/loans" label="Loans" sub="Apply & track" accent="from-blue-600 to-blue-800" icon="$" />
-            <LinkTile to="/investments" label="Investments" sub="Live market rates" accent="from-amber-500 to-orange-600" icon="↗" />
-            <ServiceTile label="Transfers" sub="Internal · ACH · Wire" accent="from-red-600 to-red-800" icon="⇄" active={method === "internal" || method === "ach"} onClick={() => setMethod("internal")} />
-            <ServiceTile label="Zelle" sub="Send in minutes" accent="from-violet-600 to-purple-700" icon="Z" active={method === "zelle"} onClick={() => setMethod("zelle")} />
-            <ServiceTile label="Apple Pay" sub="Tap to pay" accent="from-slate-800 to-black" icon="" active={method === "applepay"} onClick={() => setMethod("applepay")} />
-            <ServiceTile label="Chime" sub="Instant transfer" accent="from-emerald-500 to-emerald-700" icon="C" active={method === "chime"} onClick={() => setMethod("chime")} />
+      <main className="mx-auto grid max-w-7xl gap-10 px-4 py-10 md:grid-cols-2 md:py-16">
+        <div className="space-y-6">
+          <h1 className="text-4xl font-bold leading-tight md:text-5xl">
+            Banking <span className="bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">forged in trust.</span>
+          </h1>
+          <p className="max-w-md text-sm text-white/80 md:text-base">
+            Manage checking & savings, send money instantly with Zelle, Apple Pay or Chime, apply for loans, and trade live markets — all from one secure dashboard.
+          </p>
+          <div className="grid grid-cols-3 gap-3 text-center text-xs">
+            <Stat k="$48B" v="Assets" />
+            <Stat k="4.25%" v="Savings APY" />
+            <Stat k="24/7" v="Support" />
           </div>
-        </section>
+        </div>
 
-        {/* Transfer form — promoted above transactions */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold">Transfer Funds</h2>
-          <div className="mb-4 grid grid-cols-5 gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium">
-            {(["internal", "ach", "zelle", "applepay", "chime"] as TransferMethod[]).map((m) => (
-              <button key={m} onClick={() => setMethod(m)} className={`rounded-md py-1.5 capitalize transition ${method === m ? "bg-white text-red-700 shadow-sm" : "text-slate-600"}`}>
-                {labelFor(m)}
-              </button>
-            ))}
-          </div>
+        <form
+          onSubmit={handleSignIn}
+          className="self-center rounded-2xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur-xl"
+        >
+          <div className="mb-1 text-xs uppercase tracking-widest text-amber-300">Secure sign in</div>
+          <h2 className="mb-5 text-2xl font-bold">Welcome back</h2>
 
-          <form onSubmit={handleSubmit} className="grid gap-3 text-sm sm:grid-cols-2">
-            <Field label="From Account">
-              <select className="w-full rounded-md border border-slate-300 bg-white px-3 py-2">
-                <option>Firestone Checking (...4829) - $5,842.20</option>
-                <option>Firestone Growth Savings (...9104) - $24,150.85</option>
-              </select>
-            </Field>
-
-            {method === "ach" && (
-              <>
-                <Field label="Recipient Name">
-                  <input value={recipient} onChange={(e) => setRecipient(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="Jane Smith" />
-                </Field>
-                <Field label="Routing Number">
-                  <input value={routing} onChange={(e) => setRouting(e.target.value)} maxLength={9} className="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="9 digits" />
-                </Field>
-              </>
-            )}
-            {method === "zelle" && (
-              <Field label="Recipient Email or Phone">
-                <input value={recipient} onChange={(e) => setRecipient(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="email or phone" />
-              </Field>
-            )}
-            {method === "chime" && (
-              <Field label="Chime $Cashtag">
-                <input value={recipient} onChange={(e) => setRecipient(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="$username" />
-              </Field>
-            )}
-            {method === "applepay" && (
-              <Field label="Apple Pay">
-                <div className="rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  You'll confirm with Face ID / Touch ID on your device after submitting.
-                </div>
-              </Field>
-            )}
-
-            <Field label="Amount">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="w-full rounded-md border border-slate-300 px-3 py-2 pl-7" placeholder="0.00" />
-              </div>
-            </Field>
-
-            <div className="sm:col-span-2">
-              <button
-                type="submit"
-                disabled={chimeMut.isPending || applepayMut.isPending}
-                className="w-full rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-sm font-semibold text-white hover:from-red-800 hover:to-red-900 disabled:opacity-60"
-              >
-                {chimeMut.isPending || applepayMut.isPending ? "Processing…" : `Send via ${labelFor(method)}`}
-              </button>
-              {status && <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{status}</div>}
-            </div>
-          </form>
-        </section>
-
-        {/* Transactions — moved down */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recent Transactions</h2>
-            <span className="text-xs text-slate-500">{filtered.length} of {TRANSACTIONS.length}</span>
-          </div>
-
-          <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-white/80">Account holder name</span>
             <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search description…"
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm lg:col-span-2"
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. John Doe"
+              className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-amber-300"
+              required
             />
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
-              <option>All</option>
-              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
-            <select value={type} onChange={(e) => setType(e.target.value as any)} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
-              <option value="all">All amounts</option>
-              <option value="credit">Credits only</option>
-              <option value="debit">Debits only</option>
-            </select>
-            <div className="flex gap-1">
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-2 text-xs" />
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-2 text-xs" />
-            </div>
+          </label>
+          <label className="mt-3 block">
+            <span className="mb-1 block text-xs font-medium text-white/80">Password</span>
+            <input
+              type="password"
+              defaultValue="demo1234"
+              className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-amber-300"
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="mt-5 w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg transition hover:from-amber-300 hover:to-amber-500"
+          >
+            Sign in to Online Banking
+          </button>
+          <div className="mt-3 flex justify-between text-[11px] text-white/70">
+            <a href="#" className="hover:text-amber-300">Forgot password?</a>
+            <a href="#" className="hover:text-amber-300">Open an account</a>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr className="border-b border-slate-200">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Description</th>
-                  <th className="py-2 pr-3">Category</th>
-                  <th className="py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr><td colSpan={4} className="py-6 text-center text-sm text-slate-500">No transactions match.</td></tr>
-                )}
-                {filtered.map((t) => (
-                  <tr key={t.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 pr-3 text-slate-600">{t.date}</td>
-                    <td className="py-3 pr-3 font-medium">{t.description}</td>
-                    <td className="py-3 pr-3"><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</span></td>
-                    <td className={`py-3 text-right font-semibold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
-                      {t.amount > 0 ? "+" : "-"}${Math.abs(t.amount).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-4 rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11px] text-amber-100">
+            🔒 Encrypted session · Your information is protected by 256-bit SSL.
           </div>
-        </section>
+        </form>
       </main>
-    </BankShell>
-  );
-}
 
-function labelFor(m: TransferMethod) {
-  return { internal: "Internal", ach: "ACH", zelle: "Zelle", applepay: "Apple Pay", chime: "Chime" }[m];
-}
-
-function AccountCard({ name, mask, balance, sub }: { name: string; mask: string; balance: string; sub?: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{name} (...{mask})</div>
-      <div className="mt-2 text-3xl font-bold">{balance}</div>
-      {sub && <div className="mt-1 text-xs font-medium text-emerald-700">{sub}</div>}
+      <footer className="mx-auto max-w-7xl px-4 pb-6 pt-4 text-center text-[11px] text-white/60">
+        © 2026 Firestone Bank of USA. Member FDIC. Equal Housing Lender.
+      </footer>
     </div>
   );
 }
 
-function ServiceTile({ label, sub, accent, icon, active, onClick }: { label: string; sub: string; accent: string; icon: string; active?: boolean; onClick?: () => void }) {
+function Stat({ k, v }: { k: string; v: string }) {
   return (
-    <button onClick={onClick} className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${accent} p-4 text-left text-white shadow-sm transition hover:shadow-md ${active ? "ring-2 ring-offset-2 ring-red-600" : ""}`}>
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 text-lg font-bold backdrop-blur">{icon}</div>
-      <div className="mt-3 text-sm font-semibold">{label}</div>
-      <div className="text-[11px] opacity-80">{sub}</div>
-    </button>
+    <div className="rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur">
+      <div className="text-lg font-bold text-amber-300">{k}</div>
+      <div className="text-[10px] uppercase tracking-widest text-white/70">{v}</div>
+    </div>
   );
 }
 
-function LinkTile({ to, label, sub, accent, icon }: { to: string; label: string; sub: string; accent: string; icon: string }) {
+function BigLogo() {
   return (
-    <Link to={to} className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${accent} p-4 text-left text-white shadow-sm transition hover:shadow-md`}>
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 text-lg font-bold backdrop-blur">{icon}</div>
-      <div className="mt-3 text-sm font-semibold">{label}</div>
-      <div className="text-[11px] opacity-80">{sub}</div>
-    </Link>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
-      {children}
-    </label>
+    <div className="relative h-14 w-14">
+      <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/30" />
+      <div className="absolute inset-0 animate-[spin_6s_linear_infinite] rounded-full bg-[conic-gradient(from_0deg,theme(colors.amber.300),theme(colors.red.500),theme(colors.amber.300))] p-[2px]">
+        <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-red-900 to-red-950">
+          <svg viewBox="0 0 24 24" className="h-8 w-8 text-amber-300 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="rgba(251,191,36,0.15)" />
+            <path d="M8.5 12 h7 M8.5 14.5 h7 M12 9 v8" />
+            <circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+      </div>
+    </div>
   );
 }
