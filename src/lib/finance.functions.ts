@@ -114,9 +114,49 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
       status: "submitted",
       submittedAt: now,
       history: [{ status: "submitted", at: now, note: `Application received for ${data.fullName}. Confirmation sent to ${data.email}.` }],
+      documents: [],
+      underwritingNotes: [{ id: `un-${Date.now()}`, at: now, author: "system", text: "Application intake complete. Forwarded to underwriting queue." }],
     };
     LOAN_STORE.set(referenceId, app);
     return { ok: true, referenceId, message: `Application received. Track status with reference ${referenceId}.` };
+  });
+
+export const uploadLoanDocument = createServerFn({ method: "POST" })
+  .inputValidator((input: { referenceId: string; name: string; sizeBytes: number; contentType: string }) => {
+    if (!input.referenceId?.trim()) throw new Error("Reference required");
+    if (!input.name?.trim()) throw new Error("File name required");
+    if (!input.sizeBytes || input.sizeBytes <= 0) throw new Error("Invalid file size");
+    if (input.sizeBytes > 15 * 1024 * 1024) throw new Error("File too large (max 15 MB)");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    const app = LOAN_STORE.get(data.referenceId.trim().toUpperCase());
+    if (!app) throw new Error("Application not found");
+    const doc: LoanDocument = {
+      id: `doc-${Date.now().toString(36).toUpperCase()}`,
+      name: data.name,
+      sizeBytes: data.sizeBytes,
+      contentType: data.contentType || "application/octet-stream",
+      uploadedAt: new Date().toISOString(),
+    };
+    app.documents.push(doc);
+    app.underwritingNotes.push({ id: `un-${Date.now()}`, at: new Date().toISOString(), author: "system", text: `Document received: ${doc.name} (${Math.round(doc.sizeBytes / 1024)} KB).` });
+    return { ok: true, document: doc };
+  });
+
+export const addUnderwritingNote = createServerFn({ method: "POST" })
+  .inputValidator((input: { referenceId: string; text: string }) => {
+    if (!input.referenceId?.trim()) throw new Error("Reference required");
+    if (!input.text?.trim() || input.text.length < 2) throw new Error("Note too short");
+    if (input.text.length > 1000) throw new Error("Note too long");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    const app = LOAN_STORE.get(data.referenceId.trim().toUpperCase());
+    if (!app) throw new Error("Application not found");
+    const note: UnderwritingNote = { id: `un-${Date.now()}`, at: new Date().toISOString(), author: "applicant", text: data.text.trim() };
+    app.underwritingNotes.push(note);
+    return { ok: true, note };
   });
 
 export const getLoanStatus = createServerFn({ method: "GET" })
