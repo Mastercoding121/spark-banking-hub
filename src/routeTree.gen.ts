@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SupportRouteImport } from './routes/support'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -19,6 +20,11 @@ import { Route as LoansIdRouteImport } from './routes/loans_.$id'
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoansRoute = LoansRouteImport.update({
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/profile': typeof ProfileRoute
   '/support': typeof SupportRoute
   '/loans/$id': typeof LoansIdRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/profile': typeof ProfileRoute
   '/support': typeof SupportRoute
   '/loans/$id': typeof LoansIdRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/profile': typeof ProfileRoute
   '/support': typeof SupportRoute
   '/loans_/$id': typeof LoansIdRoute
 }
@@ -79,16 +88,25 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/investments'
     | '/loans'
+    | '/profile'
     | '/support'
     | '/loans/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/investments' | '/loans' | '/support' | '/loans/$id'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/investments'
+    | '/loans'
+    | '/profile'
+    | '/support'
+    | '/loans/$id'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
     | '/investments'
     | '/loans'
+    | '/profile'
     | '/support'
     | '/loans_/$id'
   fileRoutesById: FileRoutesById
@@ -98,6 +116,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   InvestmentsRoute: typeof InvestmentsRoute
   LoansRoute: typeof LoansRoute
+  ProfileRoute: typeof ProfileRoute
   SupportRoute: typeof SupportRoute
   LoansIdRoute: typeof LoansIdRoute
 }
@@ -109,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/support'
       fullPath: '/support'
       preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loans': {
@@ -154,9 +180,20 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   InvestmentsRoute: InvestmentsRoute,
   LoansRoute: LoansRoute,
+  ProfileRoute: ProfileRoute,
   SupportRoute: SupportRoute,
   LoansIdRoute: LoansIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
