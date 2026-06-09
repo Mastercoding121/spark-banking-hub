@@ -58,6 +58,9 @@ export const getStockQuotes = createServerFn({ method: "GET" })
 
 export type LoanStatus = "submitted" | "underwriting" | "approved";
 
+export type LoanDocument = { id: string; name: string; sizeBytes: number; contentType: string; uploadedAt: string };
+export type UnderwritingNote = { id: string; at: string; author: "system" | "underwriter" | "applicant"; text: string };
+
 export type LoanApplication = {
   referenceId: string;
   productId: string;
@@ -68,6 +71,8 @@ export type LoanApplication = {
   status: LoanStatus;
   submittedAt: string;
   history: { status: LoanStatus; at: string; note: string }[];
+  documents: LoanDocument[];
+  underwritingNotes: UnderwritingNote[];
 };
 
 // In-memory store. Survives within a server instance.
@@ -79,9 +84,11 @@ function advanceLoan(app: LoanApplication) {
   if (elapsed > 45_000 && app.status !== "approved") {
     app.status = "approved";
     app.history.push({ status: "approved", at: new Date().toISOString(), note: "Approved by underwriting. Loan officer will reach out to finalize." });
+    app.underwritingNotes.push({ id: `un-${Date.now()}`, at: new Date().toISOString(), author: "underwriter", text: "Credit profile and income verified. Loan approved at quoted APR. Closing docs to follow." });
   } else if (elapsed > 20_000 && app.status === "submitted") {
     app.status = "underwriting";
     app.history.push({ status: "underwriting", at: new Date().toISOString(), note: "Credit review and income verification in progress." });
+    app.underwritingNotes.push({ id: `un-${Date.now()}`, at: new Date().toISOString(), author: "system", text: "Soft credit pull completed. Awaiting income documentation upload." });
   }
 }
 
