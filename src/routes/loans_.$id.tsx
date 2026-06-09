@@ -28,7 +28,7 @@ const STEP_LABEL: Record<LoanStatus, string> = {
 };
 
 function LoanDetailPage() {
-  const { id } = useParams({ from: "/loans/$id" });
+  const { id } = useParams({ from: "/loans_/$id" });
   const referenceId = id.toUpperCase();
   const qc = useQueryClient();
   const fetchStatus = useServerFn(getLoanStatus);
