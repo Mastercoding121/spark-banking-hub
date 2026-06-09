@@ -7,6 +7,7 @@ import { CATEGORIES } from "@/lib/transactions";
 import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
 import { txStore, useTransactions, useHolder } from "@/lib/store";
 import { ReceiptModal, type ReceiptData } from "@/components/Receipt";
+import { SecurityPrompt } from "@/components/SecurityPrompt";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -31,6 +32,7 @@ function Dashboard() {
   const [memo, setMemo] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [pendingAuth, setPendingAuth] = useState<null | { amt: number }>(null);
 
   // Transaction filter state
   const [query, setQuery] = useState("");
@@ -85,6 +87,10 @@ function Dashboard() {
     const amt = Number(amount);
     if (!amt || amt <= 0) return setStatus("Please enter a valid amount.");
     setStatus(null);
+    setPendingAuth({ amt });
+  };
+
+  const executeTransfer = (amt: number) => {
     const ref = `TX-${Date.now().toString(36).toUpperCase()}`;
     if (method === "chime") {
       chimeMut.mutate(
@@ -162,9 +168,9 @@ function Dashboard() {
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">Transfer Funds</h2>
-          <div className="mb-4 grid grid-cols-5 gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium">
+          <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium">
             {(["internal", "ach", "zelle", "applepay", "chime"] as TransferMethod[]).map((m) => (
-              <button key={m} type="button" onClick={() => setMethod(m)} className={`rounded-md py-1.5 capitalize transition ${method === m ? "bg-white text-red-700 shadow-sm" : "text-slate-600"}`}>
+              <button key={m} type="button" onClick={() => setMethod(m)} className={`flex-1 min-w-[64px] rounded-md py-1.5 capitalize transition ${method === m ? "bg-white text-red-700 shadow-sm" : "text-slate-600"}`}>
                 {labelFor(m)}
               </button>
             ))}
@@ -308,6 +314,16 @@ function Dashboard() {
         </section>
       </main>
       <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
+      <SecurityPrompt
+        open={!!pendingAuth}
+        amount={pendingAuth?.amt ?? 0}
+        onCancel={() => setPendingAuth(null)}
+        onApprove={() => {
+          const amt = pendingAuth!.amt;
+          setPendingAuth(null);
+          executeTransfer(amt);
+        }}
+      />
     </BankShell>
   );
 }

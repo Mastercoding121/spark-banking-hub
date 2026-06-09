@@ -35,22 +35,22 @@ export function BankShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <header className="bg-gradient-to-r from-red-700 via-red-800 to-red-900 text-white shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
             {showBack && (
               <button
                 onClick={() => router.history.back()}
                 aria-label="Go back"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg hover:bg-white/20"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-base hover:bg-white/20 sm:h-9 sm:w-9 sm:text-lg"
               >
                 ←
               </button>
             )}
-            <Link to="/dashboard" className="flex items-center gap-3">
+            <Link to="/dashboard" className="flex min-w-0 items-center gap-2 sm:gap-3">
               <Logo />
-              <div className="leading-tight">
-                <div className="text-lg font-bold tracking-tight">FIRESTONE</div>
-                <div className="text-[10px] uppercase tracking-widest opacity-80">Bank of USA</div>
+              <div className="min-w-0 leading-tight">
+                <div className="truncate text-sm font-bold tracking-tight sm:text-lg">FIRESTONE</div>
+                <div className="text-[9px] uppercase tracking-widest opacity-80 sm:text-[10px]">Bank of USA</div>
               </div>
             </Link>
           </div>
@@ -59,12 +59,15 @@ export function BankShell({ children }: { children: ReactNode }) {
             <Link to="/loans" className="opacity-90 hover:opacity-100">Loans</Link>
             <Link to="/investments" className="opacity-90 hover:opacity-100">Investments</Link>
           </nav>
-          <div className="flex items-center gap-3 text-sm">
-            <div className="hidden text-right leading-tight sm:block">
+          <div className="flex shrink-0 items-center gap-1.5 text-sm sm:gap-2">
+            <div className="hidden text-right leading-tight md:block">
               <div className="text-[10px] uppercase tracking-widest opacity-70">Account Holder</div>
-              <div className="text-sm font-semibold">{holder || "Guest"}</div>
+              <div className="max-w-[140px] truncate text-sm font-semibold">{holder || "Guest"}</div>
             </div>
-            <button onClick={handleLogout} className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/20">Logout</button>
+            <Link to="/profile" aria-label="Profile" title="Profile & Security" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-xs font-bold ring-1 ring-white/20 hover:bg-white/25 sm:h-9 sm:w-9 sm:text-sm">
+              {(holder?.trim()?.[0] || "G").toUpperCase()}
+            </Link>
+            <button onClick={handleLogout} className="rounded-md bg-white/10 px-2.5 py-1.5 text-[11px] font-medium hover:bg-white/20 sm:px-3 sm:text-xs">Logout</button>
           </div>
         </div>
       </header>
