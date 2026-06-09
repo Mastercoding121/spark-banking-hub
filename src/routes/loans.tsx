@@ -272,6 +272,22 @@ function LoansPage() {
             </div>
           )}
         </section>
+
+        {myRefs.length > 0 && (
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">My Applications</h2>
+            <ul className="divide-y divide-slate-100">
+              {myRefs.map((r) => (
+                <li key={r} className="flex items-center justify-between py-2 text-sm">
+                  <span className="font-mono text-xs">{r}</span>
+                  <Link to="/loans/$id" params={{ id: r }} className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:border-red-300 hover:text-red-700">
+                    View details →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </BankShell>
   );
