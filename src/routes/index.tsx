@@ -80,13 +80,16 @@ function Landing() {
           <div className="mb-1 text-xs uppercase tracking-widest text-amber-300">Secure sign in</div>
           <h2 className="mb-5 text-2xl font-bold">Welcome back</h2>
 
+          {error && <div className="mb-3 rounded-md border border-red-300/40 bg-red-500/15 px-3 py-2 text-xs text-red-100">{error}</div>}
+
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-white/80">Account holder name</span>
+            <span className="mb-1 block text-xs font-medium text-white/80">Email</span>
             <input
               autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. John Doe"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-amber-300"
               required
             />
@@ -95,25 +98,30 @@ function Landing() {
             <span className="mb-1 block text-xs font-medium text-white/80">Password</span>
             <input
               type="password"
-              defaultValue="demo1234"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
               className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-amber-300"
+              required
             />
           </label>
 
           <button
             type="submit"
-            className="mt-5 w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg transition hover:from-amber-300 hover:to-amber-500"
+            disabled={busy}
+            className="mt-5 w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg transition hover:from-amber-300 hover:to-amber-500 disabled:opacity-60"
           >
-            Sign in to Online Banking
+            {busy ? "Signing in…" : "Sign in to Online Banking"}
           </button>
           <div className="mt-3 flex justify-between text-[11px] text-white/70">
-            <a href="#" className="hover:text-amber-300">Forgot password?</a>
-            <a href="#" className="hover:text-amber-300">Open an account</a>
+            <Link to="/forgot-password" className="hover:text-amber-300">Forgot password?</Link>
+            <Link to="/signup" className="font-semibold text-amber-300 hover:underline">Open an account</Link>
           </div>
 
           <div className="mt-4 rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11px] text-amber-100">
             🔒 Encrypted session · Your information is protected by 256-bit SSL.
           </div>
+
         </form>
       </main>
 
