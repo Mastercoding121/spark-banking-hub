@@ -1,6 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { holderStore, useHolder } from "@/lib/store";
+import { holderStore } from "@/lib/store";
+import { authStore } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,15 +15,22 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const navigate = useNavigate();
-  const holder = useHolder();
-  const [name, setName] = useState(holder);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    holderStore.set(name.trim());
-    navigate({ to: "/dashboard" });
+    setError(null); setBusy(true);
+    try {
+      const user = await authStore.signIn(email, password);
+      holderStore.set(user.name);
+      navigate({ to: "/dashboard" });
+    } catch (err: any) { setError(err?.message ?? "Sign in failed."); }
+    finally { setBusy(false); }
   };
+
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-900 font-sans text-white">
