@@ -124,9 +124,10 @@ export function ReceiptModal({ receipt, onClose }: { receipt: ReceiptData | null
         <div className="shrink-0 border-t border-dashed border-slate-300 px-4 py-2 text-center text-[10px] uppercase tracking-widest text-slate-500 sm:px-5">
           Thank you · Member FDIC
         </div>
-        <div className="shrink-0 flex gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 sm:px-5 sm:pb-4">
-          <button onClick={() => window.print()} className="flex-1 rounded-md border border-slate-300 py-2.5 text-xs font-medium hover:bg-slate-50">Print</button>
-          <button onClick={onClose} className="flex-1 rounded-md bg-slate-900 py-2.5 text-xs font-semibold text-white hover:bg-slate-800">Done</button>
+        <div className="shrink-0 flex flex-wrap gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 sm:px-5 sm:pb-4">
+          <button onClick={() => downloadReceiptPdf(receipt)} className="flex-1 min-w-[90px] rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-xs font-semibold text-white hover:from-red-800 hover:to-red-900">⬇ PDF</button>
+          <button onClick={() => window.print()} className="flex-1 min-w-[90px] rounded-md border border-slate-300 py-2.5 text-xs font-medium hover:bg-slate-50">Print</button>
+          <button onClick={onClose} className="flex-1 min-w-[90px] rounded-md bg-slate-900 py-2.5 text-xs font-semibold text-white hover:bg-slate-800">Done</button>
         </div>
       </div>
     </div>
