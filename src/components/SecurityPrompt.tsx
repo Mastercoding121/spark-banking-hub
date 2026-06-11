@@ -17,30 +17,61 @@ export function SecurityPrompt({
   const [entry, setEntry] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) { setEntry(""); setError(null); setBusy(false); setTimeout(() => inputRef.current?.focus(), 50); }
+    if (open) { setEntry(""); setError(null); setBusy(false); setProcessing(false); setTimeout(() => inputRef.current?.focus(), 50); }
   }, [open]);
 
   if (!open) return null;
 
   const hasPin = pin.length >= 4;
 
+  const runApprove = () => {
+    setProcessing(true);
+    setTimeout(() => { onApprove(); }, 2200);
+  };
+
   const verify = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!hasPin) return setError("Set a transaction PIN in Profile first.");
     if (entry !== pin) return setError("Incorrect PIN. Try again.");
-    onApprove();
+    runApprove();
   };
 
   const useBio = async () => {
     setBusy(true); setError(null);
     const ok = await requestBiometric();
     setBusy(false);
-    if (ok) onApprove();
+    if (ok) runApprove();
     else setError("Biometric authentication failed.");
   };
+
+  if (processing) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-red-900 via-red-800 to-red-950 px-6 text-white">
+        <div className="relative h-28 w-28">
+          <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/40" />
+          <div className="absolute inset-0 animate-[spin_2s_linear_infinite] rounded-full bg-[conic-gradient(from_0deg,theme(colors.amber.300),theme(colors.red.500),theme(colors.amber.300))] p-[3px]">
+            <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-red-900 to-red-950 shadow-inner">
+              <svg viewBox="0 0 24 24" className="h-14 w-14 animate-pulse text-amber-300 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="rgba(251,191,36,0.18)" />
+                <path d="M8.5 12 h7 M8.5 14.5 h7 M12 9 v8" />
+                <circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 text-[11px] uppercase tracking-[0.35em] text-amber-200">Firestone Bank</div>
+        <div className="mt-2 text-lg font-semibold">Securing your transaction…</div>
+        <div className="mt-1 text-xs opacity-80">Encrypting · Verifying · Sending</div>
+        <div className="mt-5 h-1 w-48 overflow-hidden rounded-full bg-white/15">
+          <div className="h-full w-1/3 animate-[slide-in-right_1.2s_ease-in-out_infinite] bg-amber-300" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onCancel}>

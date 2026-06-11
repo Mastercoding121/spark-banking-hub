@@ -1,4 +1,61 @@
 import { useEffect } from "react";
+import jsPDF from "jspdf";
+
+function downloadReceiptPdf(r: ReceiptData) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  // Header band
+  doc.setFillColor(153, 27, 27);
+  doc.rect(0, 0, W, 90, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("FIRESTONE BANK OF USA", 40, 40);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Official Transaction Receipt", 40, 58);
+  doc.text(new Date(r.date).toLocaleString(), 40, 74);
+
+  // Body
+  doc.setTextColor(20, 20, 20);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(r.title, 40, 130);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(153, 27, 27);
+  doc.text(`$${r.amount.toFixed(2)}`, 40, 165);
+  doc.setTextColor(20, 20, 20);
+
+  const rows: [string, string][] = [
+    ["Status", r.status],
+    ["Method", r.method],
+    ["From", r.from],
+    ["To", r.to],
+    ["Reference", r.reference],
+  ];
+  if (r.memo) rows.push(["Memo", r.memo]);
+
+  let y = 200;
+  doc.setFontSize(11);
+  rows.forEach(([k, v]) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(k.toUpperCase(), 40, y);
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(String(v), W - 200);
+    doc.text(lines, 200, y);
+    y += 18 * Math.max(1, lines.length) + 4;
+  });
+
+  doc.setDrawColor(200);
+  doc.line(40, y + 10, W - 40, y + 10);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text("Thank you for banking with Firestone · Member FDIC · Equal Housing Lender", 40, y + 28);
+
+  doc.save(`firestone-receipt-${r.reference}.pdf`);
+}
 
 export type ReceiptData = {
   title: string;
@@ -67,9 +124,10 @@ export function ReceiptModal({ receipt, onClose }: { receipt: ReceiptData | null
         <div className="shrink-0 border-t border-dashed border-slate-300 px-4 py-2 text-center text-[10px] uppercase tracking-widest text-slate-500 sm:px-5">
           Thank you · Member FDIC
         </div>
-        <div className="shrink-0 flex gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 sm:px-5 sm:pb-4">
-          <button onClick={() => window.print()} className="flex-1 rounded-md border border-slate-300 py-2.5 text-xs font-medium hover:bg-slate-50">Print</button>
-          <button onClick={onClose} className="flex-1 rounded-md bg-slate-900 py-2.5 text-xs font-semibold text-white hover:bg-slate-800">Done</button>
+        <div className="shrink-0 flex flex-wrap gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 sm:px-5 sm:pb-4">
+          <button onClick={() => downloadReceiptPdf(receipt)} className="flex-1 min-w-[90px] rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-xs font-semibold text-white hover:from-red-800 hover:to-red-900">⬇ PDF</button>
+          <button onClick={() => window.print()} className="flex-1 min-w-[90px] rounded-md border border-slate-300 py-2.5 text-xs font-medium hover:bg-slate-50">Print</button>
+          <button onClick={onClose} className="flex-1 min-w-[90px] rounded-md bg-slate-900 py-2.5 text-xs font-semibold text-white hover:bg-slate-800">Done</button>
         </div>
       </div>
     </div>
