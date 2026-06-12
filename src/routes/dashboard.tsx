@@ -278,7 +278,8 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr className="border-b border-slate-200">
@@ -322,6 +323,47 @@ function Dashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="block sm:hidden space-y-3">
+            {filtered.length === 0 && (
+              <div className="py-6 text-center text-sm text-slate-500">No transactions match.</div>
+            )}
+            {filtered.map((t) => (
+              <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-slate-500">{t.date}</div>
+                    <div className="mt-1 truncate font-semibold text-slate-900">{t.description}</div>
+                    <div className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className={`text-base font-bold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
+                      {t.amount > 0 ? "+" : "-"}${Math.abs(t.amount).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[11px] uppercase tracking-wide text-slate-400">Ref: {t.id.slice(-6).toUpperCase()}</span>
+                  <button
+                    onClick={() => setReceipt({
+                      title: t.amount > 0 ? "Incoming Transfer" : "Outgoing Transaction",
+                      reference: t.id.toUpperCase(),
+                      amount: Math.abs(t.amount),
+                      method: t.category,
+                      from: t.amount > 0 ? t.description : "Firestone Checking (...4829)",
+                      to: t.amount > 0 ? "Firestone Checking (...4829)" : t.description,
+                      status: t.amount > 0 ? "Received" : "Posted",
+                      date: t.date,
+                    })}
+                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-red-300 hover:text-red-700"
+                  >
+                    View Receipt
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </main>
