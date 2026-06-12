@@ -5,6 +5,8 @@ import { TRANSACTIONS as SEED, type Transaction } from "./transactions";
 const TX_KEY = "firestone.txs.v1";
 const REFS_KEY = "firestone.loanRefs.v1";
 const HOLDER_KEY = "firestone.holder.v1";
+const BAL_KEY = "firestone.balances.v1";
+const CREDITED_KEY = "firestone.creditedLoans.v1";
 
 function readPersistedTxs(): Transaction[] | null {
   if (typeof window === "undefined") return null;
@@ -67,6 +69,74 @@ export const holderStore = {
 export function useHolder() {
   return useSyncExternalStore(holderStore.subscribe, holderStore.getSnapshot, holderStore.getServerSnapshot);
 }
+
+// ---- Balances store ----
+export type Balances = { checking: number; savings: number };
+const DEFAULT_BAL: Balances = { checking: 5842.20, savings: 24150.85 };
+
+export const ACCOUNT_DETAILS = {
+  bankName: "Firestone Bank of USA",
+  routingNumber: "021000089",
+  swift: "FRSTUS33XXX",
+  branch: "Wilmington, DE",
+  checking: { name: "Firestone Checking", mask: "4829", number: "8829 1140 0000 4829", type: "Personal Checking" },
+  savings: { name: "Firestone Growth Savings", mask: "9104", number: "8829 1140 0000 9104", type: "High-Yield Savings", apy: "4.25%" },
+};
+
+function readBal(): Balances {
+  if (typeof window === "undefined") return DEFAULT_BAL;
+  try {
+    const raw = window.localStorage.getItem(BAL_KEY);
+    if (!raw) return DEFAULT_BAL;
+    return { ...DEFAULT_BAL, ...JSON.parse(raw) };
+  } catch { return DEFAULT_BAL; }
+}
+let balances: Balances = readBal();
+const balListeners = new Set<() => void>();
+function persistBal() {
+  if (typeof window !== "undefined") {
+    try { window.localStorage.setItem(BAL_KEY, JSON.stringify(balances)); } catch {}
+  }
+  balListeners.forEach((l) => l());
+}
+export const balanceStore = {
+  subscribe(l: () => void) { balListeners.add(l); return () => { balListeners.delete(l); }; },
+  getSnapshot() { return balances; },
+  getServerSnapshot() { return DEFAULT_BAL; },
+  adjust(account: keyof Balances, delta: number) {
+    balances = { ...balances, [account]: Math.max(0, Number((balances[account] + delta).toFixed(2))) };
+    persistBal();
+  },
+  set(next: Partial<Balances>) {
+    balances = { ...balances, ...next };
+    persistBal();
+  },
+};
+export function useBalances() {
+  return useSyncExternalStore(balanceStore.subscribe, balanceStore.getSnapshot, balanceStore.getServerSnapshot);
+}
+
+// ---- Credited loans (to avoid double-crediting on approval) ----
+function readCredited(): string[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(window.localStorage.getItem(CREDITED_KEY) ?? "[]"); } catch { return []; }
+}
+let credited = readCredited();
+const credListeners = new Set<() => void>();
+export const creditedLoanStore = {
+  subscribe(l: () => void) { credListeners.add(l); return () => { credListeners.delete(l); }; },
+  getSnapshot() { return credited; },
+  getServerSnapshot() { return [] as string[]; },
+  has(ref: string) { return credited.includes(ref); },
+  add(ref: string) {
+    if (credited.includes(ref)) return;
+    credited = [ref, ...credited];
+    if (typeof window !== "undefined") {
+      try { window.localStorage.setItem(CREDITED_KEY, JSON.stringify(credited)); } catch {}
+    }
+    credListeners.forEach((l) => l());
+  },
+};
 
 // ---- My loan refs ----
 function readRefs(): string[] {
