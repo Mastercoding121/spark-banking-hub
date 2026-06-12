@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
-import { loanRefStore, useLoanRefs } from "@/lib/store";
+import { loanRefStore, useLoanRefs, balanceStore, txStore, creditedLoanStore } from "@/lib/store";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
