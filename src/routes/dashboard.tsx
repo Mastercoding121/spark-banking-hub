@@ -326,6 +326,7 @@ function Dashboard() {
         </section>
       </main>
       <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
+      <AccountDetailsModal accountKey={openAccount} onClose={() => setOpenAccount(null)} />
       <SecurityPrompt
         open={!!pendingAuth}
         amount={pendingAuth?.amt ?? 0}
