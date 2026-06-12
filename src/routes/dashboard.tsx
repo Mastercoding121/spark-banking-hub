@@ -63,12 +63,20 @@ function Dashboard() {
 
   const finalizeTransfer = (opts: { reference: string; eta: string; methodLabel: string; toLabel: string; amt: number }) => {
     const today = new Date().toISOString().slice(0, 10);
+    const isInternal = opts.methodLabel === "Internal";
     txStore.add({
       date: today,
       description: `${opts.methodLabel} to ${opts.toLabel}`,
       category: "Transfer",
       amount: -opts.amt,
     });
+    // Move money out of checking
+    balanceStore.adjust("checking", -opts.amt);
+    if (isInternal) {
+      // Mirror credit into savings
+      balanceStore.adjust("savings", opts.amt);
+      txStore.add({ date: today, description: `Internal from Checking (...${ACCOUNT_DETAILS.checking.mask})`, category: "Transfer", amount: opts.amt });
+    }
     const r: ReceiptData = {
       title: `${opts.methodLabel} Transfer`,
       reference: opts.reference,
