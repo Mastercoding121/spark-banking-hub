@@ -344,13 +344,16 @@ function labelFor(m: TransferMethod) {
   return { internal: "Internal", ach: "ACH", zelle: "Zelle", applepay: "Apple Pay", chime: "Chime" }[m];
 }
 
-function AccountCard({ name, mask, balance, sub }: { name: string; mask: string; balance: string; sub?: string }) {
+function AccountCard({ name, mask, balance, sub, onClick }: { name: string; mask: string; balance: string; sub?: string; onClick?: () => void }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{name} (...{mask})</div>
+    <button type="button" onClick={onClick} className="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-red-300 hover:shadow-md">
+      <div className="flex items-center justify-between">
+        <div className="text-xs uppercase tracking-wide text-slate-500">{name} (...{mask})</div>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-red-700">Details →</span>
+      </div>
       <div className="mt-2 text-3xl font-bold">{balance}</div>
       {sub && <div className="mt-1 text-xs font-medium text-emerald-700">{sub}</div>}
-    </div>
+    </button>
   );
 }
 
