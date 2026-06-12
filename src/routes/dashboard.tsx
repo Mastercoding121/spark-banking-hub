@@ -131,6 +131,7 @@ function Dashboard() {
     const amt = 250;
     const today = new Date().toISOString().slice(0, 10);
     txStore.add({ date: today, description: "Incoming Zelle from Sarah Chen", category: "Transfer", amount: amt });
+    balanceStore.adjust("checking", amt);
     setReceipt({
       title: "Incoming Transfer",
       reference: `IN-${Date.now().toString(36).toUpperCase()}`,
