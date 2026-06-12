@@ -25,6 +25,8 @@ type TransferMethod = "internal" | "ach" | "zelle" | "applepay" | "chime";
 function Dashboard() {
   const holder = useHolder();
   const transactions = useTransactions();
+  const balances = useBalances();
+  const [openAccount, setOpenAccount] = useState<AccountKey | null>(null);
 
   const [method, setMethod] = useState<TransferMethod>("internal");
   const [amount, setAmount] = useState("");
