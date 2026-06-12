@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
-import { loanRefStore, useLoanRefs } from "@/lib/store";
+import { loanRefStore, useLoanRefs, balanceStore, txStore, creditedLoanStore } from "@/lib/store";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
@@ -57,6 +57,22 @@ function StatusTracker({ referenceId }: { referenceId: string }) {
   });
 
   const result = statusQuery.data;
+
+  useEffect(() => {
+    if (!result || "error" in result) return;
+    const app = result.application;
+    if (app.status === "approved" && !creditedLoanStore.has(app.referenceId)) {
+      creditedLoanStore.add(app.referenceId);
+      balanceStore.adjust("checking", app.amount);
+      txStore.add({
+        date: new Date().toISOString().slice(0, 10),
+        description: `Loan disbursement · ${app.referenceId}`,
+        category: "Income",
+        amount: app.amount,
+      });
+    }
+  }, [result]);
+
   if (!result) return <div className="text-xs text-slate-500">Loading status…</div>;
   if ("error" in result) return <div className="text-xs text-red-700">{result.error}</div>;
 

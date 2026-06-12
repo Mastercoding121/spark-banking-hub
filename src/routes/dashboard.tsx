@@ -5,9 +5,10 @@ import { useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { CATEGORIES } from "@/lib/transactions";
 import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
-import { txStore, useTransactions, useHolder } from "@/lib/store";
+import { txStore, useTransactions, useHolder, balanceStore, useBalances, ACCOUNT_DETAILS } from "@/lib/store";
 import { ReceiptModal, type ReceiptData } from "@/components/Receipt";
 import { SecurityPrompt } from "@/components/SecurityPrompt";
+import { AccountDetailsModal, type AccountKey } from "@/components/AccountDetails";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -24,6 +25,8 @@ type TransferMethod = "internal" | "ach" | "zelle" | "applepay" | "chime";
 function Dashboard() {
   const holder = useHolder();
   const transactions = useTransactions();
+  const balances = useBalances();
+  const [openAccount, setOpenAccount] = useState<AccountKey | null>(null);
 
   const [method, setMethod] = useState<TransferMethod>("internal");
   const [amount, setAmount] = useState("");
@@ -60,12 +63,20 @@ function Dashboard() {
 
   const finalizeTransfer = (opts: { reference: string; eta: string; methodLabel: string; toLabel: string; amt: number }) => {
     const today = new Date().toISOString().slice(0, 10);
+    const isInternal = opts.methodLabel === "Internal";
     txStore.add({
       date: today,
       description: `${opts.methodLabel} to ${opts.toLabel}`,
       category: "Transfer",
       amount: -opts.amt,
     });
+    // Move money out of checking
+    balanceStore.adjust("checking", -opts.amt);
+    if (isInternal) {
+      // Mirror credit into savings
+      balanceStore.adjust("savings", opts.amt);
+      txStore.add({ date: today, description: `Internal from Checking (...${ACCOUNT_DETAILS.checking.mask})`, category: "Transfer", amount: opts.amt });
+    }
     const r: ReceiptData = {
       title: `${opts.methodLabel} Transfer`,
       reference: opts.reference,
@@ -120,6 +131,7 @@ function Dashboard() {
     const amt = 250;
     const today = new Date().toISOString().slice(0, 10);
     txStore.add({ date: today, description: "Incoming Zelle from Sarah Chen", category: "Transfer", amount: amt });
+    balanceStore.adjust("checking", amt);
     setReceipt({
       title: "Incoming Transfer",
       reference: `IN-${Date.now().toString(36).toUpperCase()}`,
@@ -149,8 +161,8 @@ function Dashboard() {
         <section>
           <h2 className="mb-3 text-lg font-semibold">Account Summary</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <AccountCard name="Firestone Checking" mask="4829" balance="$5,842.20" />
-            <AccountCard name="Firestone Growth Savings" mask="9104" balance="$24,150.85" sub="APY: 4.25%" />
+            <AccountCard name="Firestone Checking" mask="4829" balance={`$${balances.checking.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} onClick={() => setOpenAccount("checking")} />
+            <AccountCard name="Firestone Growth Savings" mask="9104" balance={`$${balances.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="APY: 4.25%" onClick={() => setOpenAccount("savings")} />
           </div>
         </section>
 
@@ -314,6 +326,7 @@ function Dashboard() {
         </section>
       </main>
       <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
+      <AccountDetailsModal accountKey={openAccount} onClose={() => setOpenAccount(null)} />
       <SecurityPrompt
         open={!!pendingAuth}
         amount={pendingAuth?.amt ?? 0}
@@ -332,13 +345,16 @@ function labelFor(m: TransferMethod) {
   return { internal: "Internal", ach: "ACH", zelle: "Zelle", applepay: "Apple Pay", chime: "Chime" }[m];
 }
 
-function AccountCard({ name, mask, balance, sub }: { name: string; mask: string; balance: string; sub?: string }) {
+function AccountCard({ name, mask, balance, sub, onClick }: { name: string; mask: string; balance: string; sub?: string; onClick?: () => void }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{name} (...{mask})</div>
+    <button type="button" onClick={onClick} className="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-red-300 hover:shadow-md">
+      <div className="flex items-center justify-between">
+        <div className="text-xs uppercase tracking-wide text-slate-500">{name} (...{mask})</div>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-red-700">Details →</span>
+      </div>
       <div className="mt-2 text-3xl font-bold">{balance}</div>
       {sub && <div className="mt-1 text-xs font-medium text-emerald-700">{sub}</div>}
-    </div>
+    </button>
   );
 }
 
