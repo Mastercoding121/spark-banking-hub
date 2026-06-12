@@ -161,8 +161,8 @@ function Dashboard() {
         <section>
           <h2 className="mb-3 text-lg font-semibold">Account Summary</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <AccountCard name="Firestone Checking" mask="4829" balance="$5,842.20" />
-            <AccountCard name="Firestone Growth Savings" mask="9104" balance="$24,150.85" sub="APY: 4.25%" />
+            <AccountCard name="Firestone Checking" mask="4829" balance={`$${balances.checking.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} onClick={() => setOpenAccount("checking")} />
+            <AccountCard name="Firestone Growth Savings" mask="9104" balance={`$${balances.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="APY: 4.25%" onClick={() => setOpenAccount("savings")} />
           </div>
         </section>
 
