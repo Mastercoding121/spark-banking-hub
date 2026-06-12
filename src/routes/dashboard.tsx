@@ -5,9 +5,10 @@ import { useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { CATEGORIES } from "@/lib/transactions";
 import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
-import { txStore, useTransactions, useHolder } from "@/lib/store";
+import { txStore, useTransactions, useHolder, balanceStore, useBalances, ACCOUNT_DETAILS } from "@/lib/store";
 import { ReceiptModal, type ReceiptData } from "@/components/Receipt";
 import { SecurityPrompt } from "@/components/SecurityPrompt";
+import { AccountDetailsModal, type AccountKey } from "@/components/AccountDetails";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
