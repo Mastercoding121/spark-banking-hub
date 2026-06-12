@@ -57,6 +57,22 @@ function StatusTracker({ referenceId }: { referenceId: string }) {
   });
 
   const result = statusQuery.data;
+
+  useEffect(() => {
+    if (!result || "error" in result) return;
+    const app = result.application;
+    if (app.status === "approved" && !creditedLoanStore.has(app.referenceId)) {
+      creditedLoanStore.add(app.referenceId);
+      balanceStore.adjust("checking", app.amount);
+      txStore.add({
+        date: new Date().toISOString().slice(0, 10),
+        description: `Loan disbursement · ${app.referenceId}`,
+        category: "Income",
+        amount: app.amount,
+      });
+    }
+  }, [result]);
+
   if (!result) return <div className="text-xs text-slate-500">Loading status…</div>;
   if ("error" in result) return <div className="text-xs text-red-700">{result.error}</div>;
 
