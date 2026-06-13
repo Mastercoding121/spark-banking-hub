@@ -5,7 +5,7 @@ import { TRANSACTIONS as SEED, type Transaction } from "./transactions";
 const TX_KEY = "firestone.txs.v1";
 const REFS_KEY = "firestone.loanRefs.v1";
 const HOLDER_KEY = "firestone.holder.v1";
-const BAL_KEY = "firestone.balances.v1";
+const BAL_KEY = "firestone.balances.v2";
 const CREDITED_KEY = "firestone.creditedLoans.v1";
 
 function readPersistedTxs(): Transaction[] | null {
