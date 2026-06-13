@@ -371,7 +371,7 @@ function Dashboard() {
                   </button>
                 </div>
               </div>
-            ))}
+            );})}
           </div>
         </section>
       </main>
