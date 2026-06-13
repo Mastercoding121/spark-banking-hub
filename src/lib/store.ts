@@ -5,7 +5,7 @@ import { TRANSACTIONS as SEED, type Transaction } from "./transactions";
 const TX_KEY = "firestone.txs.v1";
 const REFS_KEY = "firestone.loanRefs.v1";
 const HOLDER_KEY = "firestone.holder.v1";
-const BAL_KEY = "firestone.balances.v1";
+const BAL_KEY = "firestone.balances.v2";
 const CREDITED_KEY = "firestone.creditedLoans.v1";
 
 function readPersistedTxs(): Transaction[] | null {
@@ -72,7 +72,7 @@ export function useHolder() {
 
 // ---- Balances store ----
 export type Balances = { checking: number; savings: number };
-const DEFAULT_BAL: Balances = { checking: 5842.20, savings: 24150.85 };
+const DEFAULT_BAL: Balances = { checking: 2300, savings: 1800 };
 
 export const ACCOUNT_DETAILS = {
   bankName: "Firestone Bank of USA",
