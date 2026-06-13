@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ACCOUNT_DETAILS, useBalances, useHolder } from "@/lib/store";
 
 export type AccountKey = "checking" | "savings";
@@ -49,12 +50,7 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
         </div>
 
         <div className="flex gap-2 p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-          <button
-            onClick={() => navigator.clipboard?.writeText(a.number)}
-            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-xs font-medium hover:border-red-300 hover:text-red-700"
-          >
-            Copy Account #
-          </button>
+          <CopyButton accountKey={accountKey} holder={holder || "Guest"} bal={bal} />
           <button
             onClick={onClose}
             className="flex-1 rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
@@ -64,6 +60,51 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
         </div>
       </div>
     </div>
+  );
+}
+
+function CopyButton({ accountKey, holder, bal }: { accountKey: AccountKey; holder: string; bal: number }) {
+  const [copied, setCopied] = useState(false);
+  const a = ACCOUNT_DETAILS[accountKey];
+
+  const handleCopy = async () => {
+    const details = [
+      `Bank: ${ACCOUNT_DETAILS.bankName}`,
+      `Account Holder: ${holder}`,
+      `Account Name: ${a.name}`,
+      `Account Type: ${a.type}`,
+      `Account Number: ${a.number}`,
+      `Routing Number (ABA): ${ACCOUNT_DETAILS.routingNumber}`,
+      `SWIFT / BIC: ${ACCOUNT_DETAILS.swift}`,
+      `Branch: ${ACCOUNT_DETAILS.branch}`,
+      "apy" in a && a.apy ? `APY: ${a.apy}` : null,
+      `Available Balance: $${bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `Status: Active`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(details);
+      setCopied(true);
+      toast.success("Bank details copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy. Please copy manually.");
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+        copied
+          ? "border-green-300 bg-green-50 text-green-700"
+          : "border-slate-300 hover:border-red-300 hover:text-red-700"
+      }`}
+    >
+      {copied ? "Copied!" : "Copy Bank Details"}
+    </button>
   );
 }
 
