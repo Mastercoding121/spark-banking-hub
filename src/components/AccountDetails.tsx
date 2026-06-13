@@ -63,6 +63,51 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
   );
 }
 
+function CopyButton({ accountKey, holder, bal }: { accountKey: AccountKey; holder: string; bal: number }) {
+  const [copied, setCopied] = useState(false);
+  const a = ACCOUNT_DETAILS[accountKey];
+
+  const handleCopy = async () => {
+    const details = [
+      `Bank: ${ACCOUNT_DETAILS.bankName}`,
+      `Account Holder: ${holder}`,
+      `Account Name: ${a.name}`,
+      `Account Type: ${a.type}`,
+      `Account Number: ${a.number}`,
+      `Routing Number (ABA): ${ACCOUNT_DETAILS.routingNumber}`,
+      `SWIFT / BIC: ${ACCOUNT_DETAILS.swift}`,
+      `Branch: ${ACCOUNT_DETAILS.branch}`,
+      "apy" in a && a.apy ? `APY: ${a.apy}` : null,
+      `Available Balance: $${bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `Status: Active`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(details);
+      setCopied(true);
+      toast.success("Bank details copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy. Please copy manually.");
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+        copied
+          ? "border-green-300 bg-green-50 text-green-700"
+          : "border-slate-300 hover:border-red-300 hover:text-red-700"
+      }`}
+    >
+      {copied ? "Copied!" : "Copy Bank Details"}
+    </button>
+  );
+}
+
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-0">
