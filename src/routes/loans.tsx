@@ -65,7 +65,7 @@ function StatusTracker({ referenceId }: { referenceId: string }) {
       creditedLoanStore.add(app.referenceId);
       balanceStore.adjust("checking", app.amount);
       txStore.add({
-        date: new Date().toISOString().slice(0, 10),
+        date: new Date().toISOString(),
         description: `Loan disbursement · ${app.referenceId}`,
         category: "Income",
         amount: app.amount,

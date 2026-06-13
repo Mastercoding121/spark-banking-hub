@@ -62,10 +62,10 @@ function Dashboard() {
   const applepayMut = useMutation({ mutationFn: (v: { amount: number }) => applepay({ data: v }) });
 
   const finalizeTransfer = (opts: { reference: string; eta: string; methodLabel: string; toLabel: string; amt: number }) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const nowIso = new Date().toISOString();
     const isInternal = opts.methodLabel === "Internal";
     txStore.add({
-      date: today,
+      date: nowIso,
       description: `${opts.methodLabel} to ${opts.toLabel}`,
       category: "Transfer",
       amount: -opts.amt,
@@ -75,7 +75,7 @@ function Dashboard() {
     if (isInternal) {
       // Mirror credit into savings
       balanceStore.adjust("savings", opts.amt);
-      txStore.add({ date: today, description: `Internal from Checking (...${ACCOUNT_DETAILS.checking.mask})`, category: "Transfer", amount: opts.amt });
+      txStore.add({ date: nowIso, description: `Internal from Checking (...${ACCOUNT_DETAILS.checking.mask})`, category: "Transfer", amount: opts.amt });
     }
     const r: ReceiptData = {
       title: `${opts.methodLabel} Transfer`,
@@ -129,8 +129,8 @@ function Dashboard() {
   // Demo "Simulate incoming" button
   const simulateIncoming = () => {
     const amt = 250;
-    const today = new Date().toISOString().slice(0, 10);
-    txStore.add({ date: today, description: "Incoming Zelle from Sarah Chen", category: "Transfer", amount: amt });
+    const nowIso = new Date().toISOString();
+    txStore.add({ date: nowIso, description: "Incoming Zelle from Sarah Chen", category: "Transfer", amount: amt });
     balanceStore.adjust("checking", amt);
     setReceipt({
       title: "Incoming Transfer",
@@ -140,7 +140,7 @@ function Dashboard() {
       from: "Sarah Chen",
       to: "Firestone Checking (...4829)",
       status: "Received",
-      date: new Date().toISOString(),
+      date: nowIso,
     });
   };
 
