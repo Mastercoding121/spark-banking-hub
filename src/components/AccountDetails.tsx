@@ -50,12 +50,7 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
         </div>
 
         <div className="flex gap-2 p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-          <button
-            onClick={() => navigator.clipboard?.writeText(a.number)}
-            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-xs font-medium hover:border-red-300 hover:text-red-700"
-          >
-            Copy Account #
-          </button>
+          <CopyButton accountKey={accountKey} holder={holder || "Guest"} bal={bal} />
           <button
             onClick={onClose}
             className="flex-1 rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
