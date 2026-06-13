@@ -294,9 +294,14 @@ function Dashboard() {
                 {filtered.length === 0 && (
                   <tr><td colSpan={5} className="py-6 text-center text-sm text-slate-500">No transactions match.</td></tr>
                 )}
-                {filtered.map((t) => (
+                {filtered.map((t) => {
+                  const f = formatTxDate(t.date);
+                  return (
                   <tr key={t.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 pr-3 text-slate-600">{t.date}</td>
+                    <td className="py-3 pr-3 text-slate-600">
+                      <div>{f.date}</div>
+                      {f.time && <div className="text-[11px] text-slate-400">{f.time}</div>}
+                    </td>
                     <td className="py-3 pr-3 font-medium">{t.description}</td>
                     <td className="py-3 pr-3"><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</span></td>
                     <td className={`py-3 pr-3 text-right font-semibold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
@@ -320,7 +325,8 @@ function Dashboard() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -330,11 +336,13 @@ function Dashboard() {
             {filtered.length === 0 && (
               <div className="py-6 text-center text-sm text-slate-500">No transactions match.</div>
             )}
-            {filtered.map((t) => (
+            {filtered.map((t) => {
+              const f = formatTxDate(t.date);
+              return (
               <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-slate-500">{t.date}</div>
+                    <div className="text-xs text-slate-500">{f.date}{f.time ? ` · ${f.time}` : ""}</div>
                     <div className="mt-1 truncate font-semibold text-slate-900">{t.description}</div>
                     <div className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</div>
                   </div>
@@ -427,4 +435,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+function formatTxDate(d: string): { date: string; time: string | null } {
+  // Date-only seed values (YYYY-MM-DD) → show date only.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    return { date: new Date(d + "T00:00:00").toLocaleDateString(), time: null };
+  }
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return { date: d, time: null };
+  return {
+    date: dt.toLocaleDateString(),
+    time: dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
 }
