@@ -191,8 +191,8 @@ function Dashboard() {
           <form onSubmit={handleSubmit} className="grid gap-3 text-sm sm:grid-cols-2">
             <Field label="From Account">
               <select className="w-full rounded-md border border-slate-300 bg-white px-3 py-2">
-                <option>Firestone Checking (...4829) - $5,842.20</option>
-                <option>Firestone Growth Savings (...9104) - $24,150.85</option>
+                <option>Firestone Checking (...4829) - $2,300.00</option>
+                <option>Firestone Growth Savings (...9104) - $1,800.00</option>
               </select>
             </Field>
 
