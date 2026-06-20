@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { isEmailVerified, markEmailVerified, generateOTP } from "@/lib/otp";
+import { useServerFn } from "@tanstack/react-start";
+import { useMutation } from "@tanstack/react-query";
+import { isEmailVerified, markEmailVerified } from "@/lib/otp";
 import { holderStore } from "@/lib/store";
 import { authStore } from "@/lib/auth";
+import { sendOtp, verifyOtp } from "@/lib/otp.functions";
 
 export const Route = createFileRoute("/verify")({
   head: () => ({
@@ -21,22 +24,40 @@ function VerifyPage() {
   const navigate = useNavigate();
   const { email } = Route.useSearch();
 
-  const [code, setCode] = useState<string>("");
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
   const [shake, setShake] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_SECS);
-  const [copied, setCopied] = useState(false);
-  const [resendFlash, setResendFlash] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  useEffect(() => {
-    setMounted(true);
-    setCode(generateOTP());
-  }, []);
+  const sendFn = useServerFn(sendOtp);
+  const verifyFn = useServerFn(verifyOtp);
+
+  const sendMut = useMutation({
+    mutationFn: (vars: { email: string; name?: string }) => sendFn({ data: vars }),
+    onSuccess: () => { setEmailSent(true); setError(null); },
+    onError: (e: any) => setError(e?.message ?? "Failed to send email."),
+  });
+
+  const verifyMut = useMutation({
+    mutationFn: (vars: { email: string; code: string }) => verifyFn({ data: vars }),
+    onSuccess: () => {
+      markEmailVerified(email);
+      const user = authStore.current();
+      if (user) holderStore.set(user.name);
+      setVerified(true);
+      setTimeout(() => navigate({ to: "/dashboard" }), 1800);
+    },
+    onError: (e: any) => {
+      setError(e?.message ?? "Verification failed.");
+      triggerShake();
+      setDigits(Array(OTP_LENGTH).fill(""));
+      setTimeout(() => inputRefs.current[0]?.focus(), 50);
+    },
+  });
 
   useEffect(() => {
     if (!email) { navigate({ to: "/" }); return; }
@@ -44,8 +65,11 @@ function VerifyPage() {
       const user = authStore.current();
       if (user) holderStore.set(user.name);
       navigate({ to: "/dashboard" });
+      return;
     }
-  }, [email, navigate]);
+    const user = authStore.current();
+    sendMut.mutate({ email, name: user?.name });
+  }, []);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -59,9 +83,7 @@ function VerifyPage() {
     next[idx] = ch;
     setDigits(next);
     setError(null);
-    if (ch && idx < OTP_LENGTH - 1) {
-      inputRefs.current[idx + 1]?.focus();
-    }
+    if (ch && idx < OTP_LENGTH - 1) inputRefs.current[idx + 1]?.focus();
   }, [digits]);
 
   const handleKeyDown = useCallback((idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -96,37 +118,17 @@ function VerifyPage() {
       triggerShake();
       return;
     }
-    if (entered !== code) {
-      setError("Incorrect code. Please try again.");
-      triggerShake();
-      setDigits(Array(OTP_LENGTH).fill(""));
-      setTimeout(() => inputRefs.current[0]?.focus(), 50);
-      return;
-    }
-    markEmailVerified(email);
-    const user = authStore.current();
-    if (user) holderStore.set(user.name);
-    setVerified(true);
-    setTimeout(() => navigate({ to: "/dashboard" }), 1800);
+    verifyMut.mutate({ email, code: entered });
   };
 
   const handleResend = () => {
-    if (countdown > 0) return;
-    const newCode = generateOTP();
-    setCode(newCode);
+    if (countdown > 0 || sendMut.isPending) return;
+    const user = authStore.current();
+    sendMut.mutate({ email, name: user?.name });
     setCountdown(RESEND_SECS);
     setDigits(Array(OTP_LENGTH).fill(""));
     setError(null);
-    setResendFlash(true);
-    setTimeout(() => setResendFlash(false), 2000);
     setTimeout(() => inputRefs.current[0]?.focus(), 50);
-  };
-
-  const copyCode = () => {
-    if (!code) return;
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   function triggerShake() {
@@ -135,13 +137,11 @@ function VerifyPage() {
   }
 
   const filled = digits.filter(Boolean).length;
+  const isBusy = sendMut.isPending || verifyMut.isPending;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#040a14] font-sans text-white selection:bg-amber-400/30">
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
-      />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" />
 
       {/* Ambient glow orbs */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -151,8 +151,7 @@ function VerifyPage() {
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
-            backgroundImage:
-              "linear-gradient(rgba(251,191,36,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(251,191,36,0.6) 1px, transparent 1px)",
+            backgroundImage: "linear-gradient(rgba(251,191,36,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(251,191,36,0.6) 1px, transparent 1px)",
             backgroundSize: "60px 60px",
           }}
         />
@@ -211,50 +210,40 @@ function VerifyPage() {
               </div>
 
               {/* Headline */}
-              <div
-                className="mb-1 text-center text-[10px] uppercase tracking-[0.35em] text-amber-400/70"
-                style={{ fontFamily: "'Space Mono', monospace" }}
-              >
+              <div className="mb-1 text-center text-[10px] uppercase tracking-[0.35em] text-amber-400/70" style={{ fontFamily: "'Space Mono', monospace" }}>
                 Identity Verification
               </div>
-              <h1
-                className="mb-2 text-center text-2xl font-bold tracking-tight sm:text-3xl"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
+              <h1 className="mb-2 text-center text-2xl font-bold tracking-tight sm:text-3xl" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 Check your inbox
               </h1>
-              <p className="mb-1 text-center text-sm text-white/50">
-                We sent a 6-digit code to
-              </p>
-              <p className="mb-6 text-center text-sm font-semibold text-amber-300 break-all">
-                {email || "your email"}
-              </p>
 
-              {/* Demo code panel — only shows after mount to avoid hydration mismatch */}
-              {mounted && (
-                <div
-                  className={`mb-6 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all duration-500 ${resendFlash ? "border-amber-400/60 bg-amber-400/10" : "border-amber-400/20 bg-amber-400/[0.05]"}`}
-                >
-                  <div>
-                    <div
-                      className="text-[9px] uppercase tracking-widest text-white/40"
-                      style={{ fontFamily: "'Space Mono', monospace" }}
-                    >
-                      Demo mode · your code
-                    </div>
-                    <div
-                      className={`mt-1 text-2xl font-bold tracking-[0.25em] transition-colors ${resendFlash ? "text-amber-300" : "text-white/80"}`}
-                      style={{ fontFamily: "'Space Mono', monospace" }}
-                    >
-                      {code || "------"}
-                    </div>
+              {/* Send state messaging */}
+              {sendMut.isPending && !emailSent ? (
+                <div className="mb-6 flex flex-col items-center gap-2">
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                    ))}
                   </div>
+                  <p className="text-sm text-white/50">Sending verification email…</p>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-1 text-center text-sm text-white/50">We sent a 6-digit code to</p>
+                  <p className="mb-6 text-center text-sm font-semibold text-amber-300 break-all">{email || "your email"}</p>
+                </>
+              )}
+
+              {/* Error from send */}
+              {sendMut.isError && (
+                <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-center text-sm text-red-300">
+                  {(sendMut.error as any)?.message ?? "Failed to send email."}
                   <button
                     type="button"
-                    onClick={copyCode}
-                    className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/60 transition hover:border-amber-400/40 hover:text-amber-300"
+                    onClick={() => { const user = authStore.current(); sendMut.mutate({ email, name: user?.name }); }}
+                    className="ml-2 underline underline-offset-2 hover:text-red-200"
                   >
-                    {copied ? "✓ Copied" : "Copy"}
+                    Retry
                   </button>
                 </div>
               )}
@@ -273,12 +262,13 @@ function VerifyPage() {
                       inputMode="numeric"
                       maxLength={1}
                       value={d}
+                      disabled={isBusy || sendMut.isError}
                       onChange={(e) => handleInput(i, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(i, e)}
                       onPaste={handlePaste}
                       onFocus={(e) => e.target.select()}
                       autoFocus={i === 0}
-                      className={`h-12 w-10 rounded-xl border text-center text-xl font-bold outline-none transition-all sm:h-14 sm:w-12 sm:text-2xl ${
+                      className={`h-12 w-10 rounded-xl border text-center text-xl font-bold outline-none transition-all sm:h-14 sm:w-12 sm:text-2xl disabled:opacity-40 ${
                         d
                           ? "border-amber-400/70 bg-amber-400/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.25)]"
                           : "border-white/10 bg-white/[0.04] text-white"
@@ -304,11 +294,11 @@ function VerifyPage() {
 
                 <button
                   type="submit"
-                  disabled={filled < OTP_LENGTH}
+                  disabled={filled < OTP_LENGTH || isBusy || sendMut.isError}
                   className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 py-3 text-sm font-bold text-red-950 shadow-lg shadow-amber-500/20 transition hover:from-amber-300 hover:to-amber-500 hover:shadow-amber-400/30 disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  Verify &amp; Continue →
+                  {verifyMut.isPending ? "Verifying…" : "Verify & Continue →"}
                 </button>
               </form>
 
@@ -318,10 +308,7 @@ function VerifyPage() {
                 {countdown > 0 ? (
                   <span>
                     Resend in{" "}
-                    <span
-                      className="font-semibold tabular-nums text-amber-400/80"
-                      style={{ fontFamily: "'Space Mono', monospace" }}
-                    >
+                    <span className="font-semibold tabular-nums text-amber-400/80" style={{ fontFamily: "'Space Mono', monospace" }}>
                       {countdown}s
                     </span>
                   </span>
@@ -329,9 +316,10 @@ function VerifyPage() {
                   <button
                     type="button"
                     onClick={handleResend}
-                    className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200"
+                    disabled={sendMut.isPending}
+                    className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50"
                   >
-                    Resend code
+                    {sendMut.isPending ? "Sending…" : "Resend code"}
                   </button>
                 )}
               </div>
@@ -405,26 +393,16 @@ function SuccessState() {
           </svg>
         </div>
       </div>
-      <div
-        className="mb-2 text-[10px] uppercase tracking-[0.35em] text-emerald-400/80"
-        style={{ fontFamily: "'Space Mono', monospace" }}
-      >
+      <div className="mb-2 text-[10px] uppercase tracking-[0.35em] text-emerald-400/80" style={{ fontFamily: "'Space Mono', monospace" }}>
         Verified
       </div>
-      <h2
-        className="mb-2 text-2xl font-bold tracking-tight"
-        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-      >
+      <h2 className="mb-2 text-2xl font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
         Identity Confirmed
       </h2>
       <p className="text-sm text-white/50">Taking you to your dashboard…</p>
       <div className="mt-6 flex gap-1.5">
         {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce"
-            style={{ animationDelay: `${i * 0.15}s` }}
-          />
+          <div key={i} className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
         ))}
       </div>
     </div>
