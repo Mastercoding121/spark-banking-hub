@@ -30,12 +30,11 @@ function SignupPage() {
     if (!form.agree) return setError("You must accept the terms to open an account.");
     setBusy(true);
     try {
-      const user = await authStore.signUp({
+      await authStore.signUp({
         email: form.email, name: form.name, password: form.password,
         securityQuestion: form.securityQuestion, securityAnswer: form.securityAnswer,
       });
-      holderStore.set(user.name);
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/verify", search: { email: form.email.trim().toLowerCase() } });
     } catch (err: any) { setError(err?.message ?? "Could not create account."); }
     finally { setBusy(false); }
   };
@@ -51,7 +50,7 @@ function SignupPage() {
             <div className="h-full w-full rounded-full bg-red-950" />
           </div>
           <div className="leading-tight">
-            <div className="text-lg font-bold tracking-tight">FIRESTONE</div>
+            <div className="text-lg font-bold tracking-tight">FINEXTHUB</div>
             <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA</div>
           </div>
         </Link>
