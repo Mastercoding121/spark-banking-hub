@@ -256,6 +256,76 @@ export const listAllTransactions = createServerFn({ method: "GET" }).handler(asy
   }));
 });
 
+// ─── getRecentActivity ────────────────────────────────────────────────────────
+export const getRecentActivity = createServerFn({ method: "GET" }).handler(async () => {
+  await requireAdmin();
+  const [txRows, userRows, loanRows] = await Promise.all([
+    query<{
+      id: string; user_id: string; date: string; description: string;
+      category: string; amount: string; account_type: string; created_at: string;
+      user_name: string; user_email: string;
+    }>(
+      `SELECT t.id, t.user_id, t.date, t.description, t.category, t.amount, t.account_type, t.created_at,
+        u.name as user_name, u.email as user_email
+       FROM transactions t JOIN users u ON u.id = t.user_id
+       ORDER BY t.created_at DESC LIMIT 15`
+    ),
+    query<{ id: string; name: string; email: string; is_admin: boolean; verified: boolean; created_at: string }>(
+      "SELECT id, name, email, is_admin, verified, created_at FROM users ORDER BY created_at DESC LIMIT 8"
+    ),
+    query<{ id: string; reference_id: string; full_name: string; email: string; amount: string; status: string; submitted_at: string }>(
+      "SELECT id, reference_id, full_name, email, amount, status, submitted_at FROM loan_applications ORDER BY submitted_at DESC LIMIT 8"
+    ),
+  ]);
+  return {
+    recentTransactions: txRows.map((r) => ({
+      id: r.id, userId: r.user_id, date: r.date, description: r.description,
+      category: r.category, amount: parseFloat(r.amount), accountType: r.account_type,
+      createdAt: r.created_at, userName: r.user_name, userEmail: r.user_email,
+    })),
+    recentUsers: userRows.map((r) => ({
+      id: r.id, name: r.name, email: r.email,
+      isAdmin: r.is_admin, verified: r.verified, createdAt: r.created_at,
+    })),
+    recentLoans: loanRows.map((r) => ({
+      id: r.id, referenceId: r.reference_id, fullName: r.full_name,
+      email: r.email, amount: parseFloat(r.amount), status: r.status, submittedAt: r.submitted_at,
+    })),
+  };
+});
+
+// ─── adminResetPassword ───────────────────────────────────────────────────────
+export const adminResetPassword = createServerFn({ method: "POST" })
+  .inputValidator((input: { userId: string; newPassword: string }) => {
+    if (!input.newPassword || input.newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    const hash = await bcrypt.hash(data.newPassword, 12);
+    await query("UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2", [hash, data.userId]);
+    return { ok: true };
+  });
+
+// ─── adminToggleVerified ──────────────────────────────────────────────────────
+export const adminToggleVerified = createServerFn({ method: "POST" })
+  .inputValidator((input: { userId: string; verified: boolean }) => input)
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query("UPDATE users SET verified = $1, updated_at = NOW() WHERE id = $2", [data.verified, data.userId]);
+    return { ok: true };
+  });
+
+// ─── adminToggleAdmin ─────────────────────────────────────────────────────────
+export const adminToggleAdmin = createServerFn({ method: "POST" })
+  .inputValidator((input: { userId: string; isAdmin: boolean }) => input)
+  .handler(async ({ data }) => {
+    const selfId = await requireAdmin();
+    if (data.userId === selfId && !data.isAdmin) throw new Error("Cannot remove your own admin access.");
+    await query("UPDATE users SET is_admin = $1, updated_at = NOW() WHERE id = $2", [data.isAdmin, data.userId]);
+    return { ok: true };
+  });
+
 // ─── listLoans ────────────────────────────────────────────────────────────────
 export const listLoans = createServerFn({ method: "GET" }).handler(async () => {
   await requireAdmin();
