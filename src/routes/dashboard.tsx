@@ -166,7 +166,7 @@ function Dashboard() {
             <div>
               <div className="text-[11px] uppercase tracking-widest opacity-80">Welcome back</div>
               <div className="text-2xl font-bold">{holder || "Account Holder"}</div>
-              <div className="text-xs opacity-80">FinextHub Online Banking · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+              <div className="text-xs opacity-80" suppressHydrationWarning>FinextHub Online Banking · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
             </div>
             {accQuery.isFetching && <div className="text-xs opacity-70 animate-pulse">Refreshing…</div>}
           </div>

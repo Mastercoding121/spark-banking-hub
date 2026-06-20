@@ -32,11 +32,12 @@ function writeRefs(refs: string[]) {
 
 let storedRefs = readRefs();
 const refListeners = new Set<() => void>();
+const EMPTY_REFS: string[] = [];
 
 const loanRefStore = {
   subscribe: (l: () => void) => { refListeners.add(l); return () => { refListeners.delete(l); }; },
   getSnapshot: () => storedRefs,
-  getServerSnapshot: () => [] as string[],
+  getServerSnapshot: () => EMPTY_REFS,
   add: (ref: string) => {
     if (!storedRefs.includes(ref)) {
       storedRefs = [...storedRefs, ref];
