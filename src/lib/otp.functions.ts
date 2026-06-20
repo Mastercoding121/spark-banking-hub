@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Resend } from "resend";
+import { query, queryOne } from "./db";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
-const store = new Map<string, { code: string; expiresAt: number }>();
 
 function generateCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -15,7 +15,14 @@ export const sendOtp = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const code = generateCode();
-    store.set(data.email, { code, expiresAt: Date.now() + OTP_TTL_MS });
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+    // Upsert OTP code in DB
+    await query(
+      `INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, $3)
+       ON CONFLICT (email) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at`,
+      [data.email, code, expiresAt]
+    );
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("Email service not configured.");
@@ -35,8 +42,6 @@ export const sendOtp = createServerFn({ method: "POST" })
     <tr>
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0d1829 0%,#111827 100%);border-radius:20px;border:1px solid rgba(251,191,36,0.15);overflow:hidden;">
-
-          <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#7c1d1d 0%,#1c1c2e 100%);padding:32px 40px;text-align:center;">
               <div style="display:inline-block;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);border-radius:50%;width:56px;height:56px;line-height:56px;text-align:center;margin-bottom:16px;font-size:24px;">🏦</div>
@@ -44,8 +49,6 @@ export const sendOtp = createServerFn({ method: "POST" })
               <p style="margin:4px 0 0;color:rgba(255,255,255,0.5);font-size:11px;letter-spacing:0.3em;text-transform:uppercase;">Bank of USA</p>
             </td>
           </tr>
-
-          <!-- Body -->
           <tr>
             <td style="padding:40px 40px 32px;">
               <p style="margin:0 0 8px;color:rgba(255,255,255,0.5);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;">Identity Verification</p>
@@ -54,13 +57,10 @@ export const sendOtp = createServerFn({ method: "POST" })
                 Hi${data.name ? ` ${data.name.split(" ")[0]}` : ""},<br/>
                 Use the code below to verify your FinextHub account. It expires in <strong style="color:#fbbf24;">10 minutes</strong>.
               </p>
-
-              <!-- OTP box -->
               <div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25);border-radius:14px;padding:28px;text-align:center;margin-bottom:28px;">
                 <p style="margin:0 0 8px;color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:0.3em;text-transform:uppercase;">Verification Code</p>
                 <p style="margin:0;font-size:42px;font-weight:700;letter-spacing:0.35em;color:#fbbf24;font-family:'Courier New',monospace;">${code}</p>
               </div>
-
               <p style="margin:0 0 6px;color:rgba(255,255,255,0.4);font-size:13px;line-height:1.6;">
                 If you didn't create a FinextHub account, you can safely ignore this email.
               </p>
@@ -69,8 +69,6 @@ export const sendOtp = createServerFn({ method: "POST" })
               </p>
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="border-top:1px solid rgba(255,255,255,0.07);padding:20px 40px;text-align:center;">
               <p style="margin:0;color:rgba(255,255,255,0.25);font-size:11px;">
@@ -79,7 +77,6 @@ export const sendOtp = createServerFn({ method: "POST" })
               </p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
@@ -109,13 +106,18 @@ export const verifyOtp = createServerFn({ method: "POST" })
     return { email: input.email.trim().toLowerCase(), code: input.code.trim() };
   })
   .handler(async ({ data }) => {
-    const entry = store.get(data.email);
-    if (!entry) throw new Error("No code found. Please request a new one.");
-    if (Date.now() > entry.expiresAt) {
-      store.delete(data.email);
+    const row = await queryOne<{ code: string; expires_at: string }>(
+      "SELECT code, expires_at FROM otp_codes WHERE email = $1",
+      [data.email]
+    );
+    if (!row) throw new Error("No code found. Please request a new one.");
+    if (new Date(row.expires_at) < new Date()) {
+      await query("DELETE FROM otp_codes WHERE email = $1", [data.email]);
       throw new Error("Code expired. Please request a new one.");
     }
-    if (data.code !== entry.code) throw new Error("Incorrect code. Please try again.");
-    store.delete(data.email);
+    if (data.code !== row.code) throw new Error("Incorrect code. Please try again.");
+    await query("DELETE FROM otp_codes WHERE email = $1", [data.email]);
+    // Mark user as verified
+    await query("UPDATE users SET verified = TRUE, updated_at = NOW() WHERE email = $1", [data.email]);
     return { ok: true };
   });

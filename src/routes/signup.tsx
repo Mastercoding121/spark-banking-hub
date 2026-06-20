@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { authStore, SECURITY_QUESTIONS } from "@/lib/auth";
 import { holderStore } from "@/lib/store";
+import { signUp } from "@/lib/user.functions";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -22,6 +24,7 @@ function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const signUpFn = useServerFn(signUp);
   const set = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -30,10 +33,14 @@ function SignupPage() {
     if (!form.agree) return setError("You must accept the terms to open an account.");
     setBusy(true);
     try {
-      await authStore.signUp({
-        email: form.email, name: form.name, password: form.password,
-        securityQuestion: form.securityQuestion, securityAnswer: form.securityAnswer,
+      const user = await signUpFn({
+        data: {
+          email: form.email, name: form.name, password: form.password,
+          securityQuestion: form.securityQuestion, securityAnswer: form.securityAnswer,
+        },
       });
+      authStore.setUser(user);
+      holderStore.set(user.name);
       navigate({ to: "/verify", search: { email: form.email.trim().toLowerCase() } });
     } catch (err: any) { setError(err?.message ?? "Could not create account."); }
     finally { setBusy(false); }

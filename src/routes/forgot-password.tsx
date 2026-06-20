@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { authStore } from "@/lib/auth";
+import { useServerFn } from "@tanstack/react-start";
+import { lookupForReset, resetPassword } from "@/lib/user.functions";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -25,10 +26,13 @@ function ForgotPage() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const lookupFn = useServerFn(lookupForReset);
+  const resetFn = useServerFn(resetPassword);
+
   const lookup = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(null); setBusy(true);
     try {
-      const r = await authStore.lookupForReset(email);
+      const r = await lookupFn({ data: { email } });
       setQuestion(r.securityQuestion); setStep("verify");
     } catch (e: any) { setErr(e?.message ?? "Could not find account."); }
     finally { setBusy(false); }
@@ -39,7 +43,7 @@ function ForgotPage() {
     if (pw !== confirm) return setErr("Passwords don't match.");
     setBusy(true);
     try {
-      await authStore.resetPassword(email, answer, pw);
+      await resetFn({ data: { email, answer, newPassword: pw } });
       setStep("done");
     } catch (e: any) { setErr(e?.message ?? "Could not reset password."); }
     finally { setBusy(false); }
@@ -56,7 +60,7 @@ function ForgotPage() {
             <div className="h-full w-full rounded-full bg-red-950" />
           </div>
           <div className="leading-tight">
-            <div className="text-lg font-bold tracking-tight">FIRESTONE</div>
+            <div className="text-lg font-bold tracking-tight">FINEXTHUB</div>
             <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA</div>
           </div>
         </Link>

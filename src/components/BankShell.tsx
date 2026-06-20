@@ -1,9 +1,11 @@
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import type { ReactNode } from "react";
 import { holderStore, useHolder } from "@/lib/store";
+import { authStore, useAuthSession } from "@/lib/auth";
+import { signOut } from "@/lib/user.functions";
 
 function Logo() {
-  // Animated coin/shield logo with pulsing glow + rotating ring + spark
   return (
     <div className="relative h-12 w-12">
       <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/30" />
@@ -26,8 +28,12 @@ export function BankShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showBack = pathname !== "/" && pathname !== "/dashboard";
   const holder = useHolder();
+  const currentUser = authStore.current();
+  const signOutFn = useServerFn(signOut);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await signOutFn({}); } catch {}
+    authStore.signOut();
     holderStore.set("");
     router.navigate({ to: "/" });
   };
@@ -49,7 +55,7 @@ export function BankShell({ children }: { children: ReactNode }) {
             <Link to="/dashboard" className="flex min-w-0 items-center gap-2 sm:gap-3">
               <Logo />
               <div className="min-w-0 leading-tight">
-                <div className="truncate text-sm font-bold tracking-tight sm:text-lg">FIRESTONE</div>
+                <div className="truncate text-sm font-bold tracking-tight sm:text-lg">FINEXTHUB</div>
                 <div className="text-[9px] uppercase tracking-widest opacity-80 sm:text-[10px]">Bank of USA</div>
               </div>
             </Link>
@@ -58,6 +64,9 @@ export function BankShell({ children }: { children: ReactNode }) {
             <Link to="/dashboard" className="opacity-90 hover:opacity-100">Dashboard</Link>
             <Link to="/loans" className="opacity-90 hover:opacity-100">Loans</Link>
             <Link to="/investments" className="opacity-90 hover:opacity-100">Investments</Link>
+            {currentUser?.isAdmin && (
+              <Link to="/admin" className="rounded-md bg-amber-400/20 px-2 py-1 text-amber-300 hover:bg-amber-400/30">Admin</Link>
+            )}
           </nav>
           <div className="flex shrink-0 items-center gap-1.5 text-sm sm:gap-2">
             <div className="hidden text-right leading-tight md:block">

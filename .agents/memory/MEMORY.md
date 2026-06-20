@@ -1,0 +1,3 @@
+- [Cookie API](cookie-api.md) — use `@tanstack/start-server-core` (not vinxi/http) for getCookie/setCookie/deleteCookie in server functions
+- [pg package](pg-install.md) — pg must be installed explicitly with `bun add pg @types/pg`; it is not bundled with TanStack Start
+- [Hook ordering](hook-ordering.md) — useServerFn calls must come before any useQuery that uses them as queryFn in a React component

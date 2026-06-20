@@ -17,8 +17,14 @@ import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as LoansIdRouteImport } from './routes/loans_.$id'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminTransactionsRouteImport } from './routes/admin/transactions'
+import { Route as AdminLoansRouteImport } from './routes/admin/loans'
+import { Route as AdminUsersUserIdRouteImport } from './routes/admin/users.$userId'
 
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
@@ -60,19 +66,50 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const LoansIdRoute = LoansIdRouteImport.update({
   id: '/loans_/$id',
   path: '/loans/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminTransactionsRoute = AdminTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminLoansRoute = AdminLoansRouteImport.update({
+  id: '/loans',
+  path: '/loans',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminUsersUserIdRoute = AdminUsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => AdminUsersRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/investments': typeof InvestmentsRoute
@@ -81,7 +118,12 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
+  '/admin/loans': typeof AdminLoansRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/users': typeof AdminUsersRouteWithChildren
   '/loans/$id': typeof LoansIdRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -93,11 +135,17 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
+  '/admin/loans': typeof AdminLoansRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/users': typeof AdminUsersRouteWithChildren
   '/loans/$id': typeof LoansIdRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/investments': typeof InvestmentsRoute
@@ -106,12 +154,18 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
+  '/admin/loans': typeof AdminLoansRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/users': typeof AdminUsersRouteWithChildren
   '/loans_/$id': typeof LoansIdRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/dashboard'
     | '/forgot-password'
     | '/investments'
@@ -120,7 +174,12 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/verify'
+    | '/admin/loans'
+    | '/admin/transactions'
+    | '/admin/users'
     | '/loans/$id'
+    | '/admin/'
+    | '/admin/users/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -132,10 +191,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/verify'
+    | '/admin/loans'
+    | '/admin/transactions'
+    | '/admin/users'
     | '/loans/$id'
+    | '/admin'
+    | '/admin/users/$userId'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/dashboard'
     | '/forgot-password'
     | '/investments'
@@ -144,11 +209,17 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/verify'
+    | '/admin/loans'
+    | '/admin/transactions'
+    | '/admin/users'
     | '/loans_/$id'
+    | '/admin/'
+    | '/admin/users/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   InvestmentsRoute: typeof InvestmentsRoute
@@ -218,12 +289,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/loans_/$id': {
       id: '/loans_/$id'
@@ -232,11 +317,70 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoansIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/transactions': {
+      id: '/admin/transactions'
+      path: '/transactions'
+      fullPath: '/admin/transactions'
+      preLoaderRoute: typeof AdminTransactionsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/loans': {
+      id: '/admin/loans'
+      path: '/loans'
+      fullPath: '/admin/loans'
+      preLoaderRoute: typeof AdminLoansRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/users/$userId': {
+      id: '/admin/users/$userId'
+      path: '/$userId'
+      fullPath: '/admin/users/$userId'
+      preLoaderRoute: typeof AdminUsersUserIdRouteImport
+      parentRoute: typeof AdminUsersRoute
+    }
   }
 }
 
+interface AdminUsersRouteChildren {
+  AdminUsersUserIdRoute: typeof AdminUsersUserIdRoute
+}
+
+const AdminUsersRouteChildren: AdminUsersRouteChildren = {
+  AdminUsersUserIdRoute: AdminUsersUserIdRoute,
+}
+
+const AdminUsersRouteWithChildren = AdminUsersRoute._addFileChildren(
+  AdminUsersRouteChildren,
+)
+
+interface AdminRouteRouteChildren {
+  AdminLoansRoute: typeof AdminLoansRoute
+  AdminTransactionsRoute: typeof AdminTransactionsRoute
+  AdminUsersRoute: typeof AdminUsersRouteWithChildren
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminLoansRoute: AdminLoansRoute,
+  AdminTransactionsRoute: AdminTransactionsRoute,
+  AdminUsersRoute: AdminUsersRouteWithChildren,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   InvestmentsRoute: InvestmentsRoute,

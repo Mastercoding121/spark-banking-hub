@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
-import { CATEGORIES } from "@/lib/transactions";
 import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
-import { txStore, useTransactions, useHolder, balanceStore, useBalances, ACCOUNT_DETAILS } from "@/lib/store";
+import {
+  getTransactions, getAccounts, addTransaction,
+  transferBetweenAccounts, recordExternalTransfer,
+  CATEGORIES,
+} from "@/lib/account.functions";
+import { ACCOUNT_DETAILS, useHolder } from "@/lib/store";
 import { ReceiptModal, type ReceiptData } from "@/components/Receipt";
 import { SecurityPrompt } from "@/components/SecurityPrompt";
 import { AccountDetailsModal, type AccountKey } from "@/components/AccountDetails";
@@ -23,12 +27,37 @@ export const Route = createFileRoute("/dashboard")({
 type TransferMethod = "internal" | "ach" | "zelle" | "applepay" | "chime";
 
 function Dashboard() {
+  const qc = useQueryClient();
   const holder = useHolder();
-  const transactions = useTransactions();
-  const balances = useBalances();
   const [openAccount, setOpenAccount] = useState<AccountKey | null>(null);
 
+  const getTransactionsFn = useServerFn(getTransactions);
+  const getAccountsFn = useServerFn(getAccounts);
+  const transferFn = useServerFn(transferBetweenAccounts);
+  const externalFn = useServerFn(recordExternalTransfer);
+  const chimeFn = useServerFn(sendChimeTransfer);
+  const applePayFn = useServerFn(initiateApplePay);
+
+  const txQuery = useQuery({
+    queryKey: ["transactions"],
+    queryFn: () => getTransactionsFn({}),
+    staleTime: 30_000,
+  });
+
+  const accQuery = useQuery({
+    queryKey: ["accounts"],
+    queryFn: () => getAccountsFn({}),
+    staleTime: 30_000,
+  });
+
+  const transactions = txQuery.data ?? [];
+  const accounts = accQuery.data ?? [];
+  const checking = accounts.find((a) => a.type === "checking")?.balance ?? 0;
+  const savings = accounts.find((a) => a.type === "savings")?.balance ?? 0;
+
   const [method, setMethod] = useState<TransferMethod>("internal");
+  const [fromAcc, setFromAcc] = useState<"checking" | "savings">("checking");
+  const [toAcc, setToAcc] = useState<"checking" | "savings">("savings");
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
   const [routing, setRouting] = useState("");
@@ -37,135 +66,125 @@ function Dashboard() {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [pendingAuth, setPendingAuth] = useState<null | { amt: number }>(null);
 
-  // Transaction filter state
-  const [query, setQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("All");
-  const [type, setType] = useState<"all" | "credit" | "debit">("all");
+  const [txType, setTxType] = useState<"all" | "credit" | "debit">("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
-      if (query && !t.description.toLowerCase().includes(query.toLowerCase())) return false;
+      if (searchQuery && !t.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (category !== "All" && t.category !== category) return false;
-      if (type === "credit" && t.amount <= 0) return false;
-      if (type === "debit" && t.amount >= 0) return false;
+      if (txType === "credit" && t.amount <= 0) return false;
+      if (txType === "debit" && t.amount >= 0) return false;
       if (from && t.date < from) return false;
       if (to && t.date > to) return false;
       return true;
     });
-  }, [transactions, query, category, type, from, to]);
+  }, [transactions, searchQuery, category, txType, from, to]);
 
-  const chime = useServerFn(sendChimeTransfer);
-  const applepay = useServerFn(initiateApplePay);
-  const chimeMut = useMutation({ mutationFn: (v: { cashtag: string; amount: number }) => chime({ data: v }) });
-  const applepayMut = useMutation({ mutationFn: (v: { amount: number }) => applepay({ data: v }) });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["transactions"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
+  };
 
   const finalizeTransfer = (opts: { reference: string; eta: string; methodLabel: string; toLabel: string; amt: number }) => {
-    const nowIso = new Date().toISOString();
-    const isInternal = opts.methodLabel === "Internal";
-    txStore.add({
-      date: nowIso,
-      description: `${opts.methodLabel} to ${opts.toLabel}`,
-      category: "Transfer",
-      amount: -opts.amt,
-    });
-    // Move money out of checking
-    balanceStore.adjust("checking", -opts.amt);
-    if (isInternal) {
-      // Mirror credit into savings
-      balanceStore.adjust("savings", opts.amt);
-      txStore.add({ date: nowIso, description: `Internal from Checking (...${ACCOUNT_DETAILS.checking.mask})`, category: "Transfer", amount: opts.amt });
-    }
-    const r: ReceiptData = {
+    setReceipt({
       title: `${opts.methodLabel} Transfer`,
       reference: opts.reference,
       amount: opts.amt,
       method: opts.methodLabel,
-      from: "FinextHub Checking (...4829)",
+      from: `FinextHub ${opts.methodLabel === "Internal" ? (fromAcc === "checking" ? "Checking" : "Savings") : "Checking"}`,
       to: opts.toLabel,
       status: "Completed",
       date: new Date().toISOString(),
       memo: memo || undefined,
-    };
-    setReceipt(r);
-    setStatus(`${opts.methodLabel}: $${opts.amt.toFixed(2)} sent. ${opts.eta} · ${opts.reference}`);
-    setAmount(""); setRecipient(""); setMemo("");
+    });
+    setStatus(`${opts.methodLabel}: $${opts.amt.toFixed(2)} sent · ${opts.reference}`);
+    setAmount(""); setRecipient(""); setMemo(""); setRouting("");
+    invalidate();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Number(amount);
     if (!amt || amt <= 0) return setStatus("Please enter a valid amount.");
+    if (method !== "chime" && method !== "applepay" && amt > (fromAcc === "checking" ? checking : savings))
+      return setStatus("Insufficient funds.");
     setStatus(null);
     setPendingAuth({ amt });
   };
 
-  const executeTransfer = (amt: number) => {
-    const ref = `TX-${Date.now().toString(36).toUpperCase()}`;
-    if (method === "chime") {
-      chimeMut.mutate(
-        { cashtag: recipient, amount: amt },
-        {
-          onSuccess: (r) => finalizeTransfer({ reference: r.transferId, eta: r.eta, methodLabel: "Chime", toLabel: recipient || "$cashtag", amt }),
-          onError: (err) => setStatus((err as Error).message),
-        },
-      );
-    } else if (method === "applepay") {
-      applepayMut.mutate(
-        { amount: amt },
-        {
-          onSuccess: (r) => finalizeTransfer({ reference: r.sessionId, eta: "Confirmed on device", methodLabel: "Apple Pay", toLabel: r.merchant, amt }),
-          onError: (err) => setStatus((err as Error).message),
-        },
-      );
-    } else {
-      const label = labelFor(method);
-      const toLabel = method === "internal" ? "FinextHub Savings (...9104)" : recipient || (method === "ach" ? "ACH recipient" : "Recipient");
-      finalizeTransfer({ reference: ref, eta: "Posted instantly", methodLabel: label, toLabel, amt });
+  const executeTransfer = async (amt: number) => {
+    try {
+      if (method === "internal") {
+        const r = await transferFn({ data: { fromAccount: fromAcc, toAccount: toAcc, amount: amt } });
+        finalizeTransfer({
+          reference: (r as any).reference,
+          eta: "Posted instantly",
+          methodLabel: "Internal",
+          toLabel: `FinextHub ${toAcc === "checking" ? "Checking" : "Savings"}`,
+          amt,
+        });
+      } else if (method === "chime") {
+        const r = await chimeFn({ data: { cashtag: recipient, amount: amt, memo } });
+        await externalFn({ data: { amount: amt, description: `Chime to ${recipient}`, method: "Chime" } });
+        finalizeTransfer({ reference: r.transferId, eta: r.eta, methodLabel: "Chime", toLabel: recipient, amt });
+      } else if (method === "applepay") {
+        const r = await applePayFn({ data: { amount: amt } });
+        await externalFn({ data: { amount: amt, description: "Apple Pay payment", method: "Apple Pay" } });
+        finalizeTransfer({ reference: r.sessionId, eta: "Confirmed on device", methodLabel: "Apple Pay", toLabel: r.merchant, amt });
+      } else {
+        const label = labelFor(method);
+        const toLabel = recipient || (method === "ach" ? "ACH recipient" : "Recipient");
+        const r = await externalFn({ data: { amount: amt, description: `${label} to ${toLabel}`, method: label } });
+        finalizeTransfer({ reference: (r as any).reference, eta: "1–3 business days", methodLabel: label, toLabel, amt });
+      }
+    } catch (err: any) {
+      setStatus(err?.message ?? "Transfer failed.");
     }
   };
 
-  // Demo "Simulate incoming" button
-  const simulateIncoming = () => {
-    const amt = 250;
-    const nowIso = new Date().toISOString();
-    txStore.add({ date: nowIso, description: "Incoming Zelle from Sarah Chen", category: "Transfer", amount: amt });
-    balanceStore.adjust("checking", amt);
-    setReceipt({
-      title: "Incoming Transfer",
-      reference: `IN-${Date.now().toString(36).toUpperCase()}`,
-      amount: amt,
-      method: "Zelle",
-      from: "Sarah Chen",
-      to: "FinextHub Checking (...4829)",
-      status: "Received",
-      date: nowIso,
-    });
-  };
+  const openAccountBalance = openAccount === "checking" ? checking : savings;
 
   return (
     <BankShell>
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+
+        {/* Welcome */}
         <section className="rounded-xl border border-slate-200 bg-gradient-to-r from-red-700 to-red-900 p-5 text-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-widest opacity-80">Welcome back</div>
-              <div className="text-2xl font-bold">{holder || "Guest"}</div>
-              <div className="text-xs opacity-80">Account Holder · Customer since 2019</div>
+              <div className="text-2xl font-bold">{holder || "Account Holder"}</div>
+              <div className="text-xs opacity-80">FinextHub Online Banking · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
             </div>
-            <button onClick={simulateIncoming} className="rounded-md bg-white/15 px-3 py-1.5 text-xs font-medium backdrop-blur hover:bg-white/25">+ Simulate incoming $250</button>
+            {accQuery.isFetching && <div className="text-xs opacity-70 animate-pulse">Refreshing…</div>}
           </div>
         </section>
 
+        {/* Accounts */}
         <section>
           <h2 className="mb-3 text-lg font-semibold">Account Summary</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <AccountCard name="FinextHub Checking" mask="4829" balance={`$${balances.checking.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} onClick={() => setOpenAccount("checking")} />
-            <AccountCard name="FinextHub Growth Savings" mask="9104" balance={`$${balances.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="APY: 4.25%" onClick={() => setOpenAccount("savings")} />
+            <AccountCard
+              name="FinextHub Checking"
+              balance={`$${checking.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              loading={accQuery.isLoading}
+              onClick={() => setOpenAccount("checking")}
+            />
+            <AccountCard
+              name="FinextHub Growth Savings"
+              balance={`$${savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              sub="APY: 4.25%"
+              loading={accQuery.isLoading}
+              onClick={() => setOpenAccount("savings")}
+            />
           </div>
         </section>
 
+        {/* Quick services */}
         <section>
           <h2 className="mb-3 text-lg font-semibold">Quick Services</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -178,6 +197,7 @@ function Dashboard() {
           </div>
         </section>
 
+        {/* Transfer panel */}
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">Transfer Funds</h2>
           <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium">
@@ -190,17 +210,25 @@ function Dashboard() {
 
           <form onSubmit={handleSubmit} className="grid gap-3 text-sm sm:grid-cols-2">
             <Field label="From Account">
-              <select className="w-full rounded-md border border-slate-300 bg-white px-3 py-2">
-                <option>FinextHub Checking (...4829) - $2,300.00</option>
-                <option>FinextHub Growth Savings (...9104) - $1,800.00</option>
+              <select
+                value={fromAcc}
+                onChange={(e) => setFromAcc(e.target.value as "checking" | "savings")}
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
+              >
+                <option value="checking">FinextHub Checking — ${checking.toLocaleString(undefined, { minimumFractionDigits: 2 })}</option>
+                <option value="savings">FinextHub Growth Savings — ${savings.toLocaleString(undefined, { minimumFractionDigits: 2 })}</option>
               </select>
             </Field>
 
             {method === "internal" && (
               <Field label="To Account">
-                <select className="w-full rounded-md border border-slate-300 bg-white px-3 py-2">
-                  <option>FinextHub Growth Savings (...9104)</option>
-                  <option>FinextHub Checking (...4829)</option>
+                <select
+                  value={toAcc}
+                  onChange={(e) => setToAcc(e.target.value as "checking" | "savings")}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
+                >
+                  <option value="savings">FinextHub Growth Savings</option>
+                  <option value="checking">FinextHub Checking</option>
                 </select>
               </Field>
             )}
@@ -245,29 +273,35 @@ function Dashboard() {
             <div className="sm:col-span-2">
               <button
                 type="submit"
-                disabled={chimeMut.isPending || applepayMut.isPending}
                 className="w-full rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-sm font-semibold text-white hover:from-red-800 hover:to-red-900 disabled:opacity-60"
               >
-                {chimeMut.isPending || applepayMut.isPending ? "Processing…" : `Send via ${labelFor(method)}`}
+                Send via {labelFor(method)}
               </button>
               {status && <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{status}</div>}
             </div>
           </form>
         </section>
 
+        {/* Transaction history */}
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Transaction History</h2>
-            <span className="text-xs text-slate-500">{filtered.length} of {transactions.length}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">{filtered.length} of {transactions.length}</span>
+              <button onClick={invalidate} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:border-red-300 hover:text-red-700">↺ Refresh</button>
+            </div>
           </div>
 
           <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search description…" className="rounded-md border border-slate-300 px-3 py-2 text-sm lg:col-span-2" />
+            <input
+              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search description…" className="rounded-md border border-slate-300 px-3 py-2 text-sm lg:col-span-2"
+            />
             <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
               <option>All</option>
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select>
-            <select value={type} onChange={(e) => setType(e.target.value as any)} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
+            <select value={txType} onChange={(e) => setTxType(e.target.value as any)} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
               <option value="all">All amounts</option>
               <option value="credit">Credits only</option>
               <option value="debit">Debits only</option>
@@ -278,105 +312,95 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Desktop table */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr className="border-b border-slate-200">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Description</th>
-                  <th className="py-2 pr-3">Category</th>
-                  <th className="py-2 pr-3 text-right">Amount</th>
-                  <th className="py-2 text-right">Receipt</th>
-                </tr>
-              </thead>
-              <tbody>
+          {txQuery.isLoading ? (
+            <div className="py-8 text-center text-sm text-slate-500 animate-pulse">Loading transactions…</div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b border-slate-200">
+                      <th className="py-2 pr-3">Date</th>
+                      <th className="py-2 pr-3">Description</th>
+                      <th className="py-2 pr-3">Category</th>
+                      <th className="py-2 pr-3">Account</th>
+                      <th className="py-2 pr-3 text-right">Amount</th>
+                      <th className="py-2 text-right">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 && (
+                      <tr><td colSpan={6} className="py-6 text-center text-sm text-slate-500">No transactions yet. Complete a transfer to see it here.</td></tr>
+                    )}
+                    {filtered.map((t) => {
+                      const f = formatTxDate(t.date);
+                      return (
+                        <tr key={t.id} className="border-b border-slate-100 last:border-0">
+                          <td className="py-3 pr-3 text-slate-600">
+                            <div>{f.date}</div>
+                            {f.time && <div className="text-[11px] text-slate-400">{f.time}</div>}
+                          </td>
+                          <td className="py-3 pr-3 font-medium">{t.description}</td>
+                          <td className="py-3 pr-3"><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</span></td>
+                          <td className="py-3 pr-3 text-xs text-slate-500 capitalize">{t.accountType}</td>
+                          <td className={`py-3 pr-3 text-right font-semibold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
+                            {t.amount > 0 ? "+" : "-"}${Math.abs(t.amount).toFixed(2)}
+                          </td>
+                          <td className="py-3 text-right">
+                            <button
+                              onClick={() => setReceipt({
+                                title: t.amount > 0 ? "Incoming Transfer" : "Outgoing Transaction",
+                                reference: t.id.slice(0, 8).toUpperCase(),
+                                amount: Math.abs(t.amount),
+                                method: t.category,
+                                from: t.amount > 0 ? t.description : `FinextHub ${t.accountType}`,
+                                to: t.amount > 0 ? `FinextHub ${t.accountType}` : t.description,
+                                status: t.amount > 0 ? "Received" : "Posted",
+                                date: t.date,
+                              })}
+                              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:border-red-300 hover:text-red-700"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="block sm:hidden space-y-3">
                 {filtered.length === 0 && (
-                  <tr><td colSpan={5} className="py-6 text-center text-sm text-slate-500">No transactions match.</td></tr>
+                  <div className="py-6 text-center text-sm text-slate-500">No transactions yet.</div>
                 )}
                 {filtered.map((t) => {
                   const f = formatTxDate(t.date);
                   return (
-                  <tr key={t.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 pr-3 text-slate-600">
-                      <div>{f.date}</div>
-                      {f.time && <div className="text-[11px] text-slate-400">{f.time}</div>}
-                    </td>
-                    <td className="py-3 pr-3 font-medium">{t.description}</td>
-                    <td className="py-3 pr-3"><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</span></td>
-                    <td className={`py-3 pr-3 text-right font-semibold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
-                      {t.amount > 0 ? "+" : "-"}${Math.abs(t.amount).toFixed(2)}
-                    </td>
-                    <td className="py-3 text-right">
-                      <button
-                        onClick={() => setReceipt({
-                          title: t.amount > 0 ? "Incoming Transfer" : "Outgoing Transaction",
-                          reference: t.id.toUpperCase(),
-                          amount: Math.abs(t.amount),
-                          method: t.category,
-                          from: t.amount > 0 ? t.description : "FinextHub Checking (...4829)",
-                          to: t.amount > 0 ? "FinextHub Checking (...4829)" : t.description,
-                          status: t.amount > 0 ? "Received" : "Posted",
-                          date: t.date,
-                        })}
-                        className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:border-red-300 hover:text-red-700"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
+                    <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs text-slate-500">{f.date}{f.time ? ` · ${f.time}` : ""}</div>
+                          <div className="mt-1 truncate font-semibold text-slate-900">{t.description}</div>
+                          <div className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</div>
+                        </div>
+                        <div className={`shrink-0 text-base font-bold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
+                          {t.amount > 0 ? "+" : "-"}${Math.abs(t.amount).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile cards */}
-          <div className="block sm:hidden space-y-3">
-            {filtered.length === 0 && (
-              <div className="py-6 text-center text-sm text-slate-500">No transactions match.</div>
-            )}
-            {filtered.map((t) => {
-              const f = formatTxDate(t.date);
-              return (
-              <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs text-slate-500">{f.date}{f.time ? ` · ${f.time}` : ""}</div>
-                    <div className="mt-1 truncate font-semibold text-slate-900">{t.description}</div>
-                    <div className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className={`text-base font-bold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
-                      {t.amount > 0 ? "+" : "-"}${Math.abs(t.amount).toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[11px] uppercase tracking-wide text-slate-400">Ref: {t.id.slice(-6).toUpperCase()}</span>
-                  <button
-                    onClick={() => setReceipt({
-                      title: t.amount > 0 ? "Incoming Transfer" : "Outgoing Transaction",
-                      reference: t.id.toUpperCase(),
-                      amount: Math.abs(t.amount),
-                      method: t.category,
-                      from: t.amount > 0 ? t.description : "FinextHub Checking (...4829)",
-                      to: t.amount > 0 ? "FinextHub Checking (...4829)" : t.description,
-                      status: t.amount > 0 ? "Received" : "Posted",
-                      date: t.date,
-                    })}
-                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-red-300 hover:text-red-700"
-                  >
-                    View Receipt
-                  </button>
-                </div>
               </div>
-            );})}
-          </div>
+            </>
+          )}
         </section>
       </main>
+
       <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
-      <AccountDetailsModal accountKey={openAccount} onClose={() => setOpenAccount(null)} />
+      <AccountDetailsModal accountKey={openAccount} balance={openAccountBalance} onClose={() => setOpenAccount(null)} />
       <SecurityPrompt
         open={!!pendingAuth}
         amount={pendingAuth?.amt ?? 0}
@@ -395,14 +419,14 @@ function labelFor(m: TransferMethod) {
   return { internal: "Internal", ach: "ACH", zelle: "Zelle", applepay: "Apple Pay", chime: "Chime" }[m];
 }
 
-function AccountCard({ name, mask, balance, sub, onClick }: { name: string; mask: string; balance: string; sub?: string; onClick?: () => void }) {
+function AccountCard({ name, balance, sub, loading, onClick }: { name: string; balance: string; sub?: string; loading?: boolean; onClick?: () => void }) {
   return (
     <button type="button" onClick={onClick} className="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-red-300 hover:shadow-md">
       <div className="flex items-center justify-between">
-        <div className="text-xs uppercase tracking-wide text-slate-500">{name} (...{mask})</div>
+        <div className="text-xs uppercase tracking-wide text-slate-500">{name}</div>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-red-700">Details →</span>
       </div>
-      <div className="mt-2 text-3xl font-bold">{balance}</div>
+      <div className={`mt-2 text-3xl font-bold ${loading ? "animate-pulse text-slate-300" : ""}`}>{loading ? "Loading…" : balance}</div>
       {sub && <div className="mt-1 text-xs font-medium text-emerald-700">{sub}</div>}
     </button>
   );
@@ -438,7 +462,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function formatTxDate(d: string): { date: string; time: string | null } {
-  // Date-only seed values (YYYY-MM-DD) → show date only.
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     return { date: new Date(d + "T00:00:00").toLocaleDateString(), time: null };
   }

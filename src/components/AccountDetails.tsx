@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ACCOUNT_DETAILS, useBalances, useHolder } from "@/lib/store";
+import { ACCOUNT_DETAILS } from "@/lib/store";
+import { useHolder } from "@/lib/store";
 
 export type AccountKey = "checking" | "savings";
 
-export function AccountDetailsModal({ accountKey, onClose }: { accountKey: AccountKey | null; onClose: () => void }) {
+export function AccountDetailsModal({
+  accountKey,
+  balance,
+  onClose,
+}: {
+  accountKey: AccountKey | null;
+  balance?: number;
+  onClose: () => void;
+}) {
   useEffect(() => {
     if (!accountKey) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -12,11 +21,10 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
     return () => window.removeEventListener("keydown", onKey);
   }, [accountKey, onClose]);
 
-  const balances = useBalances();
   const holder = useHolder();
   if (!accountKey) return null;
   const a = ACCOUNT_DETAILS[accountKey];
-  const bal = balances[accountKey];
+  const bal = balance ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" onClick={onClose}>
@@ -28,7 +36,9 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
           <div>
             <div className="text-[11px] uppercase tracking-widest opacity-80">{ACCOUNT_DETAILS.bankName}</div>
             <div className="text-lg font-bold">{a.name}</div>
-            <div className="mt-2 text-3xl font-bold">${bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="mt-2 text-3xl font-bold">
+              ${bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
             <div className="text-[11px] opacity-80">Available balance</div>
           </div>
           <button onClick={onClose} aria-label="Close" className="rounded-full bg-white/15 px-2 text-lg leading-7 backdrop-blur hover:bg-white/25">×</button>
@@ -37,7 +47,6 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
         <div className="space-y-3 p-5 text-sm">
           <Row k="Account Holder" v={holder || "Guest"} />
           <Row k="Account Type" v={a.type} />
-          <Row k="Account Number" v={a.number} mono />
           <Row k="Routing Number (ABA)" v={ACCOUNT_DETAILS.routingNumber} mono />
           <Row k="SWIFT / BIC" v={ACCOUNT_DETAILS.swift} mono />
           <Row k="Branch" v={ACCOUNT_DETAILS.branch} />
@@ -46,7 +55,7 @@ export function AccountDetailsModal({ accountKey, onClose }: { accountKey: Accou
         </div>
 
         <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-[11px] text-slate-500">
-          Keep your account and routing numbers private. Share only with trusted senders.
+          Keep your routing number private. Share only with trusted senders.
         </div>
 
         <div className="flex gap-2 p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
@@ -73,7 +82,6 @@ function CopyButton({ accountKey, holder, bal }: { accountKey: AccountKey; holde
       `Account Holder: ${holder}`,
       `Account Name: ${a.name}`,
       `Account Type: ${a.type}`,
-      `Account Number: ${a.number}`,
       `Routing Number (ABA): ${ACCOUNT_DETAILS.routingNumber}`,
       `SWIFT / BIC: ${ACCOUNT_DETAILS.swift}`,
       `Branch: ${ACCOUNT_DETAILS.branch}`,
@@ -98,9 +106,7 @@ function CopyButton({ accountKey, holder, bal }: { accountKey: AccountKey; holde
     <button
       onClick={handleCopy}
       className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-        copied
-          ? "border-green-300 bg-green-50 text-green-700"
-          : "border-slate-300 hover:border-red-300 hover:text-red-700"
+        copied ? "border-green-300 bg-green-50 text-green-700" : "border-slate-300 hover:border-red-300 hover:text-red-700"
       }`}
     >
       {copied ? "Copied!" : "Copy Bank Details"}
