@@ -9,7 +9,7 @@ import { loanRefStore, useLoanRefs, balanceStore, txStore, creditedLoanStore } f
 export const Route = createFileRoute("/loans")({
   head: () => ({
     meta: [
-      { title: "Loans — Firestone Bank of USA" },
+      { title: "Loans — FinextHub Bank of USA" },
       { name: "description", content: "Apply for personal, auto, mortgage, student, business, or home equity loans and track your application status live." },
     ],
   }),

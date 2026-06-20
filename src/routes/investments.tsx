@@ -8,7 +8,7 @@ import { getStockQuotes, submitInvestmentOrder } from "@/lib/finance.functions";
 export const Route = createFileRoute("/investments")({
   head: () => ({
     meta: [
-      { title: "Investments & Live Stock Trading — Firestone Bank of USA" },
+      { title: "Investments & Live Stock Trading — FinextHub Bank of USA" },
       { name: "description", content: "Trade stocks at real-time market rates. Choose from CDs, IRAs, ETFs, and managed portfolios." },
     ],
   }),

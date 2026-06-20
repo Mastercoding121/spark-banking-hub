@@ -13,7 +13,7 @@ import {
 export const Route = createFileRoute("/loans_/$id")({
   head: () => ({
     meta: [
-      { title: "Loan Application Details — Firestone Bank of USA" },
+      { title: "Loan Application Details — FinextHub Bank of USA" },
       { name: "description", content: "View your submitted loan application, upload supporting documents, and see underwriting notes." },
     ],
   }),

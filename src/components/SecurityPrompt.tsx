@@ -63,7 +63,7 @@ export function SecurityPrompt({
             </div>
           </div>
         </div>
-        <div className="mt-6 text-[11px] uppercase tracking-[0.35em] text-amber-200">Firestone Bank</div>
+        <div className="mt-6 text-[11px] uppercase tracking-[0.35em] text-amber-200">FinextHub Bank</div>
         <div className="mt-2 text-lg font-semibold">Securing your transaction…</div>
         <div className="mt-1 text-xs opacity-80">Encrypting · Verifying · Sending</div>
         <div className="mt-5 h-1 w-48 overflow-hidden rounded-full bg-white/15">

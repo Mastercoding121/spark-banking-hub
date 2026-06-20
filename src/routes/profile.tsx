@@ -5,7 +5,7 @@ import { holderStore, useHolder } from "@/lib/store";
 import { securityStore, useSecurity, requestBiometric } from "@/lib/security";
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Profile & Security — Firestone Bank" }] }),
+  head: () => ({ meta: [{ title: "Profile & Security — FinextHub Bank" }] }),
   component: ProfilePage,
 });
 

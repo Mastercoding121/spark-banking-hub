@@ -5,8 +5,8 @@ import { authStore } from "@/lib/auth";
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Reset your password — Firestone Bank of USA" },
-      { name: "description", content: "Securely reset your Firestone Bank online banking password." },
+      { title: "Reset your password — FinextHub Bank of USA" },
+      { name: "description", content: "Securely reset your FinextHub Bank online banking password." },
     ],
   }),
   component: ForgotPage,

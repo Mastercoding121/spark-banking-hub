@@ -91,7 +91,7 @@ export function BankShell({ children }: { children: ReactNode }) {
             <span className="text-slate-400">›</span>
           </Link>
           <div className="text-center text-xs text-slate-500">
-            © 2026 Firestone Bank of USA. Member FDIC. Equal Housing Lender.
+            © 2026 FinextHub Bank of USA. Member FDIC. Equal Housing Lender.
           </div>
         </div>
       </footer>

@@ -13,8 +13,8 @@ import { AccountDetailsModal, type AccountKey } from "@/components/AccountDetail
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Firestone Bank of USA" },
-      { name: "description", content: "Your Firestone Bank dashboard: balances, transfers, recent transactions." },
+      { title: "Dashboard — FinextHub Bank of USA" },
+      { name: "description", content: "Your FinextHub Bank dashboard: balances, transfers, recent transactions." },
     ],
   }),
   component: Dashboard,
@@ -82,7 +82,7 @@ function Dashboard() {
       reference: opts.reference,
       amount: opts.amt,
       method: opts.methodLabel,
-      from: "Firestone Checking (...4829)",
+      from: "FinextHub Checking (...4829)",
       to: opts.toLabel,
       status: "Completed",
       date: new Date().toISOString(),
@@ -121,7 +121,7 @@ function Dashboard() {
       );
     } else {
       const label = labelFor(method);
-      const toLabel = method === "internal" ? "Firestone Savings (...9104)" : recipient || (method === "ach" ? "ACH recipient" : "Recipient");
+      const toLabel = method === "internal" ? "FinextHub Savings (...9104)" : recipient || (method === "ach" ? "ACH recipient" : "Recipient");
       finalizeTransfer({ reference: ref, eta: "Posted instantly", methodLabel: label, toLabel, amt });
     }
   };
@@ -138,7 +138,7 @@ function Dashboard() {
       amount: amt,
       method: "Zelle",
       from: "Sarah Chen",
-      to: "Firestone Checking (...4829)",
+      to: "FinextHub Checking (...4829)",
       status: "Received",
       date: nowIso,
     });
@@ -161,8 +161,8 @@ function Dashboard() {
         <section>
           <h2 className="mb-3 text-lg font-semibold">Account Summary</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <AccountCard name="Firestone Checking" mask="4829" balance={`$${balances.checking.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} onClick={() => setOpenAccount("checking")} />
-            <AccountCard name="Firestone Growth Savings" mask="9104" balance={`$${balances.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="APY: 4.25%" onClick={() => setOpenAccount("savings")} />
+            <AccountCard name="FinextHub Checking" mask="4829" balance={`$${balances.checking.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} onClick={() => setOpenAccount("checking")} />
+            <AccountCard name="FinextHub Growth Savings" mask="9104" balance={`$${balances.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="APY: 4.25%" onClick={() => setOpenAccount("savings")} />
           </div>
         </section>
 
@@ -191,16 +191,16 @@ function Dashboard() {
           <form onSubmit={handleSubmit} className="grid gap-3 text-sm sm:grid-cols-2">
             <Field label="From Account">
               <select className="w-full rounded-md border border-slate-300 bg-white px-3 py-2">
-                <option>Firestone Checking (...4829) - $2,300.00</option>
-                <option>Firestone Growth Savings (...9104) - $1,800.00</option>
+                <option>FinextHub Checking (...4829) - $2,300.00</option>
+                <option>FinextHub Growth Savings (...9104) - $1,800.00</option>
               </select>
             </Field>
 
             {method === "internal" && (
               <Field label="To Account">
                 <select className="w-full rounded-md border border-slate-300 bg-white px-3 py-2">
-                  <option>Firestone Growth Savings (...9104)</option>
-                  <option>Firestone Checking (...4829)</option>
+                  <option>FinextHub Growth Savings (...9104)</option>
+                  <option>FinextHub Checking (...4829)</option>
                 </select>
               </Field>
             )}
@@ -314,8 +314,8 @@ function Dashboard() {
                           reference: t.id.toUpperCase(),
                           amount: Math.abs(t.amount),
                           method: t.category,
-                          from: t.amount > 0 ? t.description : "Firestone Checking (...4829)",
-                          to: t.amount > 0 ? "Firestone Checking (...4829)" : t.description,
+                          from: t.amount > 0 ? t.description : "FinextHub Checking (...4829)",
+                          to: t.amount > 0 ? "FinextHub Checking (...4829)" : t.description,
                           status: t.amount > 0 ? "Received" : "Posted",
                           date: t.date,
                         })}
@@ -360,8 +360,8 @@ function Dashboard() {
                       reference: t.id.toUpperCase(),
                       amount: Math.abs(t.amount),
                       method: t.category,
-                      from: t.amount > 0 ? t.description : "Firestone Checking (...4829)",
-                      to: t.amount > 0 ? "Firestone Checking (...4829)" : t.description,
+                      from: t.amount > 0 ? t.description : "FinextHub Checking (...4829)",
+                      to: t.amount > 0 ? "FinextHub Checking (...4829)" : t.description,
                       status: t.amount > 0 ? "Received" : "Posted",
                       date: t.date,
                     })}

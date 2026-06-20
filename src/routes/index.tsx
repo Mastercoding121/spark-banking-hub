@@ -6,8 +6,8 @@ import { authStore } from "@/lib/auth";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Firestone Bank of USA — Secure Online Banking" },
-      { name: "description", content: "Welcome to Firestone Bank of USA. Sign in to manage accounts, transfer funds, apply for loans, and invest." },
+      { title: "FinextHub Bank of USA — Secure Online Banking" },
+      { name: "description", content: "Welcome to FinextHub Bank of USA. Sign in to manage accounts, transfer funds, apply for loans, and invest." },
     ],
   }),
   component: Landing,
@@ -49,7 +49,7 @@ function Landing() {
         <div className="flex items-center gap-3">
           <BigLogo />
           <div className="leading-tight">
-            <div className="text-xl font-bold tracking-tight">FIRESTONE</div>
+            <div className="text-xl font-bold tracking-tight">FINEXTHUB</div>
             <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA · Since 1892</div>
           </div>
         </div>
@@ -126,7 +126,7 @@ function Landing() {
       </main>
 
       <footer className="mx-auto max-w-7xl px-4 pb-6 pt-4 text-center text-[11px] text-white/60">
-        © 2026 Firestone Bank of USA. Member FDIC. Equal Housing Lender.
+        © 2026 FinextHub Bank of USA. Member FDIC. Equal Housing Lender.
       </footer>
     </div>
   );

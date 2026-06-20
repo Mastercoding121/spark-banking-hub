@@ -52,7 +52,7 @@ function downloadReceiptPdf(r: ReceiptData) {
   doc.line(40, y + 10, W - 40, y + 10);
   doc.setFontSize(9);
   doc.setTextColor(120);
-  doc.text("Thank you for banking with Firestone · Member FDIC · Equal Housing Lender", 40, y + 28);
+  doc.text("Thank you for banking with FinextHub · Member FDIC · Equal Housing Lender", 40, y + 28);
 
   doc.save(`firestone-receipt-${r.reference}.pdf`);
 }
@@ -97,7 +97,7 @@ export function ReceiptModal({ receipt, onClose }: { receipt: ReceiptData | null
         <div className="shrink-0 bg-gradient-to-br from-red-700 to-red-900 px-4 py-4 text-white sm:px-5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-widest opacity-80">Firestone Bank of USA</div>
+              <div className="text-[10px] uppercase tracking-widest opacity-80">FinextHub Bank of USA</div>
               <div className="mt-1 truncate text-base font-bold sm:text-lg">{receipt.title}</div>
               <div className="text-xs opacity-90">{d.toLocaleString()}</div>
             </div>

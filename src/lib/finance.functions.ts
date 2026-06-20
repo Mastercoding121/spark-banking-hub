@@ -222,7 +222,7 @@ export const initiateApplePay = createServerFn({ method: "POST" })
       ok: true,
       sessionId,
       paymentToken: token,
-      merchant: data.merchant ?? "Firestone Bank Merchant",
+      merchant: data.merchant ?? "FinextHub Bank Merchant",
       amount: data.amount,
       message: `Apple Pay session created. Confirm with Face ID on your device.`,
     };
@@ -242,12 +242,12 @@ export const submitSupportMessage = createServerFn({ method: "POST" })
     return { ok: true, ticketId, message: `Hi ${data.name}, ticket ${ticketId} opened. An agent will reply to ${data.email} shortly.` };
   });
 
-const SUPPORT_EMAIL = "support@firestonebank.us";
+const SUPPORT_EMAIL = "support@finexthub.us";
 
 function botAnswer(text: string): string {
   const t = text.toLowerCase();
   if (/(hi|hello|hey|good (morning|afternoon|evening))/.test(t)) {
-    return `Hi! I'm Ember, Firestone's 24/7 virtual assistant. How can I help today? For anything I can't resolve, our team is at ${SUPPORT_EMAIL}.`;
+    return `Hi! I'm Ember, FinextHub's 24/7 virtual assistant. How can I help today? For anything I can't resolve, our team is at ${SUPPORT_EMAIL}.`;
   }
   if (/(lost|stolen).*(card|debit|credit)|card.*(lost|stolen)/.test(t)) {
     return `I'm sorry to hear that. I've flagged your card for immediate freeze. Please email ${SUPPORT_EMAIL} with the last 4 digits so a fraud specialist can issue a replacement.`;
@@ -268,10 +268,10 @@ function botAnswer(text: string): string {
     return `Transfers are handled from your Dashboard. If a transfer is stuck or missing, email ${SUPPORT_EMAIL} with the reference ID and we'll trace it.`;
   }
   if (/(routing|account number|swift|bic)/.test(t)) {
-    return `Firestone routing number is 021000089. For your account number and wire details, please email ${SUPPORT_EMAIL} from your registered address for security.`;
+    return `FinextHub routing number is 021000089. For your account number and wire details, please email ${SUPPORT_EMAIL} from your registered address for security.`;
   }
   if (/(hours|open|24)/.test(t)) {
-    return `We're open 24/7 — every day of the year. For anything urgent, email ${SUPPORT_EMAIL} or call 1-800-FIRESTONE.`;
+    return `We're open 24/7 — every day of the year. For anything urgent, email ${SUPPORT_EMAIL} or call 1-800-FINEXTHUB.`;
   }
   if (/(thanks|thank you|thx|ty)/.test(t)) {
     return `You're welcome! If anything else comes up, email ${SUPPORT_EMAIL} and a human agent will follow up.`;

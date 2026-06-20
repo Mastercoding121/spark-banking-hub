@@ -8,7 +8,7 @@ import { chatWithBot, submitSupportMessage } from "@/lib/finance.functions";
 export const Route = createFileRoute("/support")({
   head: () => ({
     meta: [
-      { title: "24/7 Customer Support — Firestone Bank of USA" },
+      { title: "24/7 Customer Support — FinextHub Bank of USA" },
       { name: "description", content: "Chat instantly with Ember, our 24/7 banking assistant, or open a ticket. We answer any time of day." },
     ],
   }),
@@ -25,7 +25,7 @@ function SupportBot() {
     {
       id: "welcome",
       role: "bot",
-      text: `Hi, I'm Ember — Firestone's 24/7 virtual assistant. Ask me anything about your account, transfers, loans, or investments. For anything I can't resolve, I'll direct you to ${SUPPORT_EMAIL}.`,
+      text: `Hi, I'm Ember — FinextHub's 24/7 virtual assistant. Ask me anything about your account, transfers, loans, or investments. For anything I can't resolve, I'll direct you to ${SUPPORT_EMAIL}.`,
       at: new Date().toISOString(),
     },
   ]);

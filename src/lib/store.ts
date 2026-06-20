@@ -75,12 +75,12 @@ export type Balances = { checking: number; savings: number };
 const DEFAULT_BAL: Balances = { checking: 2300, savings: 1800 };
 
 export const ACCOUNT_DETAILS = {
-  bankName: "Firestone Bank of USA",
+  bankName: "FinextHub Bank of USA",
   routingNumber: "021000089",
   swift: "FRSTUS33XXX",
   branch: "Wilmington, DE",
-  checking: { name: "Firestone Checking", mask: "4829", number: "8829 1140 0000 4829", type: "Personal Checking" },
-  savings: { name: "Firestone Growth Savings", mask: "9104", number: "8829 1140 0000 9104", type: "High-Yield Savings", apy: "4.25%" },
+  checking: { name: "FinextHub Checking", mask: "4829", number: "8829 1140 0000 4829", type: "Personal Checking" },
+  savings: { name: "FinextHub Growth Savings", mask: "9104", number: "8829 1140 0000 9104", type: "High-Yield Savings", apy: "4.25%" },
 };
 
 function readBal(): Balances {
