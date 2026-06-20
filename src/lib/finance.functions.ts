@@ -235,8 +235,8 @@ function botAnswer(text: string): string {
     return `Live rates are on the Investments page. For advisor consultations, email ${SUPPORT_EMAIL} and an advisor will schedule a call.`;
   if (/(transfer|zelle|chime|apple pay|ach|wire)/.test(t))
     return `Transfers are handled from your Dashboard. If a transfer is stuck, email ${SUPPORT_EMAIL} with the reference ID and we'll trace it.`;
-  if (/(routing|account number|swift|bic)/.test(t))
-    return `FinextHub routing number is 021000089. For your full account number and wire details, email ${SUPPORT_EMAIL} from your registered address for security.`;
+  if (/(routing|account number|swift|bic|wire)/.test(t))
+    return `For your account and wire transfer details, please email ${SUPPORT_EMAIL} from your registered address and a team member will respond securely.`;
   if (/(hours|open|24)/.test(t))
     return `We're open 24/7 — every day of the year. Email ${SUPPORT_EMAIL} or call 1-800-FINEXTHUB.`;
   if (/(thanks|thank you|thx|ty)/.test(t))

@@ -4,22 +4,7 @@ import type { ReactNode } from "react";
 import { holderStore, useHolder } from "@/lib/store";
 import { authStore } from "@/lib/auth";
 import { signOut } from "@/lib/user.functions";
-
-function Logo() {
-  return (
-    <div className="relative h-10 w-10 shrink-0">
-      <div className="absolute inset-0 animate-[spin_6s_linear_infinite] rounded-full bg-[conic-gradient(from_0deg,theme(colors.amber.300),theme(colors.red.500),theme(colors.amber.300))] p-[2px]">
-        <div className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-red-900 to-red-950">
-          <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber-300" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="rgba(251,191,36,0.15)" />
-            <path d="M8.5 12 h7 M8.5 14.5 h7 M12 9 v8" />
-            <circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none" />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { BrandLogo } from "@/components/BrandLogo";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Dashboard" },
@@ -118,7 +103,7 @@ export function BankShell({ children }: { children: ReactNode }) {
 
           {/* Brand */}
           <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5">
-            <Logo />
+            <BrandLogo height="h-9" className="text-white/60" />
             <div className="hidden leading-tight sm:block">
               <div className="text-base font-bold tracking-tight">FINEXTHUB</div>
               <div className="text-[9px] uppercase tracking-[0.25em] opacity-70">Bank of USA</div>
@@ -210,8 +195,15 @@ export function BankShell({ children }: { children: ReactNode }) {
               </div>
               <span className="text-slate-400">›</span>
             </Link>
-            <div className="text-center text-xs text-slate-500">
-              © 2026 FinextHub Bank of USA · Member FDIC · Equal Housing Lender
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-xs text-slate-500">
+              <span>© 2026 FinextHub Bank of USA · Member FDIC · Equal Housing Lender</span>
+              <span className="hidden sm:flex items-center gap-3">
+                <Link to="/privacy" className="hover:text-red-700">Privacy Policy</Link>
+                <span>·</span>
+                <Link to="/terms" className="hover:text-red-700">Terms of Service</Link>
+                <span>·</span>
+                <Link to="/cookies" className="hover:text-red-700">Cookie Policy</Link>
+              </span>
             </div>
           </div>
         </footer>

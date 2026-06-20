@@ -10,14 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyRouteImport } from './routes/verify'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
 import { Route as GrantsRouteImport } from './routes/grants'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -35,6 +38,11 @@ const VerifyRoute = VerifyRouteImport.update({
   path: '/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -48,6 +56,11 @@ const SignupRoute = SignupRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoansRoute = LoansRouteImport.update({
@@ -73,6 +86,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
@@ -134,14 +152,17 @@ const AdminUsersUserIdRoute = AdminUsersUserIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify': typeof VerifyRoute
   '/admin/features': typeof AdminFeaturesRoute
   '/admin/grants': typeof AdminGrantsRoute
@@ -155,14 +176,17 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify': typeof VerifyRoute
   '/admin/features': typeof AdminFeaturesRoute
   '/admin/grants': typeof AdminGrantsRoute
@@ -178,14 +202,17 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify': typeof VerifyRoute
   '/admin/features': typeof AdminFeaturesRoute
   '/admin/grants': typeof AdminGrantsRoute
@@ -202,14 +229,17 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/cookies'
     | '/dashboard'
     | '/forgot-password'
     | '/grants'
     | '/investments'
     | '/loans'
+    | '/privacy'
     | '/profile'
     | '/signup'
     | '/support'
+    | '/terms'
     | '/verify'
     | '/admin/features'
     | '/admin/grants'
@@ -223,14 +253,17 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cookies'
     | '/dashboard'
     | '/forgot-password'
     | '/grants'
     | '/investments'
     | '/loans'
+    | '/privacy'
     | '/profile'
     | '/signup'
     | '/support'
+    | '/terms'
     | '/verify'
     | '/admin/features'
     | '/admin/grants'
@@ -245,14 +278,17 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/cookies'
     | '/dashboard'
     | '/forgot-password'
     | '/grants'
     | '/investments'
     | '/loans'
+    | '/privacy'
     | '/profile'
     | '/signup'
     | '/support'
+    | '/terms'
     | '/verify'
     | '/admin/features'
     | '/admin/grants'
@@ -268,14 +304,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
+  CookiesRoute: typeof CookiesRoute
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GrantsRoute: typeof GrantsRoute
   InvestmentsRoute: typeof InvestmentsRoute
   LoansRoute: typeof LoansRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   SignupRoute: typeof SignupRoute
   SupportRoute: typeof SupportRoute
+  TermsRoute: typeof TermsRoute
   VerifyRoute: typeof VerifyRoute
   LoansIdRoute: typeof LoansIdRoute
 }
@@ -287,6 +326,13 @@ declare module '@tanstack/react-router' {
       path: '/verify'
       fullPath: '/verify'
       preLoaderRoute: typeof VerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -308,6 +354,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loans': {
@@ -343,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -464,14 +524,17 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
+  CookiesRoute: CookiesRoute,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GrantsRoute: GrantsRoute,
   InvestmentsRoute: InvestmentsRoute,
   LoansRoute: LoansRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   SignupRoute: SignupRoute,
   SupportRoute: SupportRoute,
+  TermsRoute: TermsRoute,
   VerifyRoute: VerifyRoute,
   LoansIdRoute: LoansIdRoute,
 }

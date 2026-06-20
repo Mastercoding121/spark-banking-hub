@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { authStore, SECURITY_QUESTIONS } from "@/lib/auth";
 import { holderStore } from "@/lib/store";
 import { signUp } from "@/lib/user.functions";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -53,9 +54,7 @@ function SignupPage() {
 
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
         <Link to="/" className="flex items-center gap-3">
-          <div className="h-10 w-10 animate-[spin_6s_linear_infinite] rounded-full bg-[conic-gradient(from_0deg,theme(colors.amber.300),theme(colors.red.500),theme(colors.amber.300))] p-[2px]">
-            <div className="h-full w-full rounded-full bg-red-950" />
-          </div>
+          <BrandLogo height="h-9" className="text-white/60" />
           <div className="leading-tight">
             <div className="text-lg font-bold tracking-tight">FINEXTHUB</div>
             <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA</div>

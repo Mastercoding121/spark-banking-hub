@@ -1,0 +1,148 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/terms")({
+  head: () => ({
+    meta: [{ title: "Terms of Service — FinextHub Bank of USA" }],
+  }),
+  component: TermsPage,
+});
+
+function TermsPage() {
+  return <LegalPage title="Terms of Service" lastUpdated="June 1, 2026" sections={TERMS_SECTIONS} />;
+}
+
+const TERMS_SECTIONS = [
+  {
+    heading: "1. Agreement to Terms",
+    body: `By accessing or using the FinextHub Bank of USA online banking platform, mobile applications, and related services (collectively, the "Services"), you agree to be bound by these Terms of Service ("Terms") and all applicable laws and regulations. If you do not agree with any part of these Terms, you must not use our Services. These Terms constitute a legally binding agreement between you and FinextHub Bank of USA ("FinextHub," "we," "our," or "us").`,
+  },
+  {
+    heading: "2. Eligibility",
+    body: `To open and maintain an account with FinextHub, you must:
+• Be at least 18 years of age.
+• Be a legal resident of the United States.
+• Provide accurate, current, and complete information during registration.
+• Maintain the accuracy of your account information.
+• Have the legal capacity to enter into binding contracts.
+We reserve the right to refuse service, close accounts, or cancel transactions at our sole discretion, including where we are unable to verify your identity or where we suspect fraudulent or illegal activity.`,
+  },
+  {
+    heading: "3. Account Registration and Security",
+    body: `You are responsible for maintaining the confidentiality of your account credentials, including your email address, password, PIN, and any security codes. You agree to:
+• Create a strong, unique password and never share it with any third party.
+• Notify us immediately at support@finexthub.com if you become aware of any unauthorized access to your account.
+• Sign out of your account at the end of each session, especially on shared devices.
+You are liable for all activity that occurs under your account credentials. We are not responsible for any loss or damage arising from your failure to maintain the security of your account.`,
+  },
+  {
+    heading: "4. Permitted Use of Services",
+    body: `You may use our Services only for lawful purposes and in accordance with these Terms. You agree not to:
+• Use the Services for any illegal, fraudulent, or unauthorized purpose.
+• Transmit funds that are the proceeds of criminal activity or are intended for use in money laundering.
+• Circumvent any security measures or access controls.
+• Interfere with or disrupt the Services or servers or networks connected to the Services.
+• Use automated bots, scripts, or other automated means to access the Services.
+• Impersonate any person or entity or falsely represent your identity.
+• Violate any applicable local, state, national, or international law or regulation.`,
+  },
+  {
+    heading: "5. Deposits, Withdrawals, and Transfers",
+    body: `All deposits are subject to our hold policies and applicable federal regulations. We reserve the right to place holds on deposited funds in accordance with Regulation CC and our internal risk policies. Transfers are subject to daily and transaction limits that may be adjusted at our discretion. We reserve the right to reject, reverse, or suspend any transaction that we reasonably believe to be fraudulent, illegal, or in violation of these Terms. All transactions are processed in U.S. dollars.`,
+  },
+  {
+    heading: "6. Fees",
+    body: `FinextHub offers a no-monthly-fee checking account. Certain additional services, including wire transfers, foreign transactions, and expedited account services, may be subject to fees as disclosed in our Schedule of Fees, which is incorporated herein by reference and available within the platform. We will provide at least 30 days' advance notice of any new fees or fee increases.`,
+  },
+  {
+    heading: "7. FDIC Insurance",
+    body: `FinextHub Bank of USA is a Member FDIC. Your deposits are insured by the Federal Deposit Insurance Corporation (FDIC) up to $250,000 per depositor, per insured bank, for each account ownership category. FDIC insurance does not cover investment products, annuities, or any non-deposit products.`,
+  },
+  {
+    heading: "8. Loans and Credit Products",
+    body: `Any loan or credit product offered through our platform is subject to creditworthiness review, underwriting, and applicable state and federal lending laws including the Truth in Lending Act (TILA). Loan approval is not guaranteed. Interest rates, terms, and conditions are disclosed in your individual loan agreement. Defaulting on any loan obligation may result in adverse credit reporting and collection proceedings.`,
+  },
+  {
+    heading: "9. Investment Products",
+    body: `Investment products displayed on our platform are for informational purposes only and do not constitute financial advice. Investment values fluctuate and past performance is not indicative of future results. You should consult a qualified financial advisor before making any investment decision. FinextHub is not a registered broker-dealer or investment advisor unless separately disclosed.`,
+  },
+  {
+    heading: "10. Intellectual Property",
+    body: `All content, features, and functionality of our Services — including text, graphics, logos, icons, images, audio clips, data compilations, software, and the design, selection, and arrangement thereof — are the exclusive property of FinextHub Bank of USA and are protected by United States and international copyright, trademark, patent, trade secret, and other intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to access and use the Services for personal, non-commercial purposes only.`,
+  },
+  {
+    heading: "11. Disclaimers and Limitation of Liability",
+    body: `THE SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, FINEXTHUB DISCLAIMS ALL WARRANTIES, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. FINEXTHUB WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF DATA, USE, OR OTHER INTANGIBLE LOSSES, RESULTING FROM YOUR ACCESS TO OR USE OF (OR INABILITY TO ACCESS OR USE) THE SERVICES.`,
+  },
+  {
+    heading: "12. Governing Law and Dispute Resolution",
+    body: `These Terms are governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of law provisions. Any dispute arising out of or relating to these Terms or the Services shall be resolved by binding arbitration conducted by the American Arbitration Association (AAA) under its Consumer Arbitration Rules, except that either party may seek injunctive or other equitable relief in any court of competent jurisdiction. YOU WAIVE YOUR RIGHT TO A JURY TRIAL AND YOUR RIGHT TO PARTICIPATE IN CLASS ACTION LITIGATION.`,
+  },
+  {
+    heading: "13. Changes to Terms",
+    body: `We reserve the right to modify these Terms at any time. We will notify you of material changes at least 30 days in advance via email or a notice prominently displayed within our platform. Your continued use of the Services after the effective date of any changes constitutes your acceptance of the revised Terms.`,
+  },
+  {
+    heading: "14. Contact Us",
+    body: `For questions about these Terms, please contact:\n\nFinextHub Bank of USA\nLegal Department\n1201 N. Market Street, Suite 100\nWilmington, DE 19801\nEmail: legal@finexthub.com\nPhone: 1-800-FINEXTHUB`,
+  },
+];
+
+function LegalPage({ title, lastUpdated, sections }: {
+  title: string;
+  lastUpdated: string;
+  sections: { heading: string; body: string }[];
+}) {
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <header className="bg-gradient-to-r from-red-700 via-red-800 to-red-900 text-white shadow-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+          <Link to="/dashboard" className="flex items-center gap-2.5 no-underline">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 text-amber-300" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="rgba(251,191,36,0.15)" />
+                <path d="M8.5 12 h7 M8.5 14.5 h7 M12 9 v8" />
+                <circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-sm font-bold tracking-tight">FINEXTHUB</div>
+              <div className="text-[9px] uppercase tracking-[0.2em] opacity-70">Bank of USA</div>
+            </div>
+          </Link>
+          <Link to="/profile" className="text-xs text-white/70 transition hover:text-white">← Back to Profile</Link>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-4xl px-4 py-10">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 ring-1 ring-red-200">
+          Legal Document
+        </div>
+        <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-slate-900">{title}</h1>
+        <p className="mb-8 text-sm text-slate-500">Last updated: {lastUpdated} · FinextHub Bank of USA, Member FDIC</p>
+
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="divide-y divide-slate-100">
+            {sections.map((s) => (
+              <section key={s.heading} className="px-6 py-6">
+                <h2 className="mb-3 text-base font-bold text-slate-800">{s.heading}</h2>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{s.body}</p>
+              </section>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-wrap justify-center gap-4 text-xs text-slate-400">
+          <Link to="/privacy" className="hover:text-red-700">Privacy Policy</Link>
+          <span>·</span>
+          <Link to="/terms" className="hover:text-red-700">Terms of Service</Link>
+          <span>·</span>
+          <Link to="/cookies" className="hover:text-red-700">Cookie Policy</Link>
+        </div>
+
+        <p className="mt-4 text-center text-xs text-slate-400">
+          © 2026 FinextHub Bank of USA · Member FDIC · Equal Housing Lender
+        </p>
+      </main>
+    </div>
+  );
+}

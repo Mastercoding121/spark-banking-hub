@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -225,9 +225,6 @@ function ProfilePage() {
           <div className="divide-y divide-slate-100 px-4">
             {[
               ["App Version", "2.6.0 (Latest)"],
-              ["FDIC Certificate #", "41678"],
-              ["Routing Number", "021000089"],
-              ["SWIFT / BIC", "FNXBUS33XXX"],
             ].map(([k, v]) => (
               <div key={k} className="flex items-center justify-between py-3">
                 <span className="text-sm text-slate-600">{k}</span>
@@ -240,13 +237,21 @@ function ProfilePage() {
         {/* ── Legal ─────────────────────────────────────────────── */}
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
           <div className="divide-y divide-slate-100">
-            {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (
-              <button key={item} className="flex w-full items-center justify-between py-3 text-sm text-slate-600 hover:text-red-700">
-                {item}
+            {([
+              ["Privacy Policy", "/privacy"],
+              ["Terms of Service", "/terms"],
+              ["Cookie Policy", "/cookies"],
+            ] as const).map(([label, to]) => (
+              <Link
+                key={to}
+                to={to}
+                className="flex w-full items-center justify-between py-3 text-sm text-slate-600 hover:text-red-700"
+              >
+                {label}
                 <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-300" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
                 </svg>
-              </button>
+              </Link>
             ))}
           </div>
         </div>

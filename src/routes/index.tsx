@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { holderStore } from "@/lib/store";
 import { authStore } from "@/lib/auth";
 import { signIn } from "@/lib/user.functions";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -47,7 +48,7 @@ function Landing() {
 
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5">
         <div className="flex items-center gap-3">
-          <BigLogo />
+          <BrandLogo height="h-10" className="text-white/60" />
           <div className="leading-tight">
             <div className="text-xl font-bold tracking-tight">FINEXTHUB</div>
             <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA · Since 1892</div>
@@ -135,14 +136,3 @@ function Landing() {
   );
 }
 
-function BigLogo() {
-  return (
-    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-amber-400/30 to-red-600/30 ring-1 ring-amber-400/40">
-      <svg viewBox="0 0 24 24" className="h-6 w-6 text-amber-300" fill="none" stroke="currentColor" strokeWidth="2.2">
-        <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="rgba(251,191,36,0.15)" />
-        <path d="M8.5 12 h7 M8.5 14.5 h7 M12 9 v8" strokeLinecap="round" />
-        <circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none" />
-      </svg>
-    </div>
-  );
-}

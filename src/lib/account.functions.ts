@@ -28,8 +28,6 @@ export const CATEGORIES = [
 
 export const ACCOUNT_DETAILS = {
   bankName: "FinextHub Bank of USA",
-  routingNumber: "021000089",
-  swift: "FNXBUS33XXX",
   branch: "Wilmington, DE",
   checking: { name: "FinextHub Checking", type: "Personal Checking" },
   savings: { name: "FinextHub Growth Savings", type: "High-Yield Savings", apy: "4.25%" },

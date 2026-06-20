@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { isEmailVerified, markEmailVerified } from "@/lib/otp";
@@ -163,17 +164,7 @@ function VerifyPage() {
       {/* Header */}
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
         <Link to="/" className="flex items-center gap-3">
-          <div className="relative h-10 w-10">
-            <div className="absolute inset-0 animate-[spin_6s_linear_infinite] rounded-full bg-[conic-gradient(from_0deg,theme(colors.amber.300),theme(colors.red.500),theme(colors.amber.300))] p-[2px]">
-              <div className="flex h-full w-full items-center justify-center rounded-full bg-[#040a14]">
-                <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber-300" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="rgba(251,191,36,0.12)" />
-                  <path d="M8.5 12 h7 M8.5 14.5 h7 M12 9 v8" />
-                  <circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none" />
-                </svg>
-              </div>
-            </div>
-          </div>
+          <BrandLogo height="h-9" className="text-white/50" />
           <div className="leading-tight">
             <div className="text-base font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FINEXTHUB</div>
             <div className="text-[9px] uppercase tracking-[0.3em] text-white/50">Bank of USA</div>

@@ -47,8 +47,6 @@ export function AccountDetailsModal({
         <div className="space-y-3 p-5 text-sm">
           <Row k="Account Holder" v={holder || "Guest"} />
           <Row k="Account Type" v={a.type} />
-          <Row k="Routing Number (ABA)" v={ACCOUNT_DETAILS.routingNumber} mono />
-          <Row k="SWIFT / BIC" v={ACCOUNT_DETAILS.swift} mono />
           <Row k="Branch" v={ACCOUNT_DETAILS.branch} />
           {"apy" in a && a.apy ? <Row k="APY" v={a.apy} /> : null}
           <Row k="Status" v="Active" />
@@ -82,8 +80,6 @@ function CopyButton({ accountKey, holder, bal }: { accountKey: AccountKey; holde
       `Account Holder: ${holder}`,
       `Account Name: ${a.name}`,
       `Account Type: ${a.type}`,
-      `Routing Number (ABA): ${ACCOUNT_DETAILS.routingNumber}`,
-      `SWIFT / BIC: ${ACCOUNT_DETAILS.swift}`,
       `Branch: ${ACCOUNT_DETAILS.branch}`,
       "apy" in a && a.apy ? `APY: ${a.apy}` : null,
       `Available Balance: $${bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
