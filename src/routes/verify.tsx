@@ -28,7 +28,7 @@ function VerifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
   const [shake, setShake] = useState(false);
-  const [countdown, setCountdown] = useState(RESEND_SECS);
+  const [countdown, setCountdown] = useState(0);
   const [emailSent, setEmailSent] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -39,7 +39,7 @@ function VerifyPage() {
 
   const sendMut = useMutation({
     mutationFn: (vars: { email: string; name?: string }) => sendFn({ data: vars }),
-    onSuccess: () => { setEmailSent(true); setError(null); },
+    onSuccess: () => { setEmailSent(true); setError(null); setCountdown(RESEND_SECS); },
     onError: (e: any) => setError(e?.message ?? "Failed to send email."),
   });
 
@@ -129,7 +129,6 @@ function VerifyPage() {
     if (countdown > 0 || sendMut.isPending) return;
     const user = authStore.current();
     sendMut.mutate({ email, name: user?.name });
-    setCountdown(RESEND_SECS);
     setDigits(Array(OTP_LENGTH).fill(""));
     setError(null);
     setTimeout(() => inputRefs.current[0]?.focus(), 50);
@@ -306,27 +305,29 @@ function VerifyPage() {
                 </button>
               </form>
 
-              {/* Resend */}
-              <div className="mt-5 text-center text-xs text-white/40">
-                Didn&apos;t get it?{" "}
-                {countdown > 0 ? (
-                  <span>
-                    Resend in{" "}
-                    <span className="font-semibold tabular-nums text-amber-400/80" style={{ fontFamily: "'Space Mono', monospace" }}>
-                      {countdown}s
+              {/* Resend — only shown after the first email is confirmed sent */}
+              {emailSent && (
+                <div className="mt-5 text-center text-xs text-white/40">
+                  Didn&apos;t get it?{" "}
+                  {countdown > 0 ? (
+                    <span>
+                      Resend in{" "}
+                      <span className="font-semibold tabular-nums text-amber-400/80" style={{ fontFamily: "'Space Mono', monospace" }}>
+                        {countdown}s
+                      </span>
                     </span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={sendMut.isPending}
-                    className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50"
-                  >
-                    {sendMut.isPending ? "Sending…" : "Resend code"}
-                  </button>
-                )}
-              </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={sendMut.isPending}
+                      className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50"
+                    >
+                      {sendMut.isPending ? "Sending…" : "Resend code"}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Security badge */}
               <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-white/25">
