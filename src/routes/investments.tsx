@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { getStockQuotes, submitInvestmentOrder } from "@/lib/finance.functions";
+import { getFeatureFlags } from "@/lib/feature-flags.functions";
 
 export const Route = createFileRoute("/investments")({
   head: () => ({
@@ -26,10 +27,26 @@ const PRODUCTS = [
   { id: "managed", name: "Managed Portfolio", rate: "Risk-based", min: "$5,000", desc: "Advisor-built, auto-rebalanced." },
 ];
 
+function SystemNotice({ feature, reason, details }: { feature: string; reason?: string | null; details?: string | null }) {
+  return (
+    <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm mt-8">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-3xl">⚙️</div>
+      <h2 className="text-xl font-bold text-slate-800">{feature} Temporarily Unavailable</h2>
+      {reason && <p className="mt-2 text-sm font-semibold text-amber-700">{reason}</p>}
+      <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+        {details || `${feature} is temporarily unavailable. Please check back later or contact support for assistance.`}
+      </p>
+      <div className="mt-5 rounded-lg border border-slate-100 bg-slate-50 px-4 py-2 text-[11px] text-slate-400">— System</div>
+    </div>
+  );
+}
+
 function InvestmentsPage() {
+  const flagsFn = useServerFn(getFeatureFlags);
   const fetchQuotes = useServerFn(getStockQuotes);
   const placeOrder = useServerFn(submitInvestmentOrder);
 
+  const flagsQuery = useQuery({ queryKey: ["feature-flags"], queryFn: () => flagsFn({}), staleTime: 30_000 });
   const quotesQuery = useQuery({
     queryKey: ["quotes", SYMBOLS],
     queryFn: () => fetchQuotes({ data: { symbols: SYMBOLS } }),
@@ -45,6 +62,17 @@ function InvestmentsPage() {
   });
 
   const selectedQuote = quotesQuery.data?.quotes.find((q) => q.symbol === selectedSymbol);
+  const invFlag = flagsQuery.data?.investments;
+
+  if (flagsQuery.data && !invFlag?.enabled) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-7xl px-4 py-6">
+          <SystemNotice feature="Investments" reason={invFlag?.reason} details={invFlag?.details} />
+        </main>
+      </BankShell>
+    );
+  }
 
   return (
     <BankShell>

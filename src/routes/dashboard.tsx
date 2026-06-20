@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
+import { getFeatureFlags } from "@/lib/feature-flags.functions";
 import {
   getTransactions, getAccounts, addTransaction,
   transferBetweenAccounts, recordExternalTransfer,
@@ -31,6 +32,7 @@ function Dashboard() {
   const holder = useHolder();
   const [openAccount, setOpenAccount] = useState<AccountKey | null>(null);
 
+  const flagsFn = useServerFn(getFeatureFlags);
   const getTransactionsFn = useServerFn(getTransactions);
   const getAccountsFn = useServerFn(getAccounts);
   const transferFn = useServerFn(transferBetweenAccounts);
@@ -50,10 +52,16 @@ function Dashboard() {
     staleTime: 30_000,
   });
 
+  const flagsQuery = useQuery({ queryKey: ["feature-flags"], queryFn: () => flagsFn({}), staleTime: 30_000 });
+
   const transactions = txQuery.data ?? [];
   const accounts = accQuery.data ?? [];
   const checking = accounts.find((a) => a.type === "checking")?.balance ?? 0;
   const savings = accounts.find((a) => a.type === "savings")?.balance ?? 0;
+
+  const transfersEnabled = !flagsQuery.data || flagsQuery.data.transfers.enabled;
+  const depositsEnabled  = !flagsQuery.data || flagsQuery.data.deposits.enabled;
+  const withdrawalsEnabled = !flagsQuery.data || flagsQuery.data.withdrawals.enabled;
 
   const [method, setMethod] = useState<TransferMethod>("internal");
   const [fromAcc, setFromAcc] = useState<"checking" | "savings">("checking");
@@ -200,6 +208,33 @@ function Dashboard() {
         {/* Transfer panel */}
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">Transfer Funds</h2>
+
+          {/* System flag notices */}
+          {!transfersEnabled && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-5 text-center">
+              <div className="text-2xl mb-2">⚙️</div>
+              <p className="font-semibold text-amber-800 text-sm">Transfers Temporarily Unavailable</p>
+              {flagsQuery.data?.transfers.reason && <p className="text-xs text-amber-700 mt-1">{flagsQuery.data.transfers.reason}</p>}
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">{flagsQuery.data?.transfers.details || "Transfer services are temporarily unavailable. Please check back later."}</p>
+              <p className="text-[10px] text-slate-400 mt-3">— System</p>
+            </div>
+          )}
+          {transfersEnabled && !depositsEnabled && (
+            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs">
+              <span className="font-semibold text-amber-800">Deposits: </span>
+              <span className="text-amber-700">{flagsQuery.data?.deposits.reason || "Deposits"} temporarily unavailable. {flagsQuery.data?.deposits.details || ""}</span>
+              <span className="ml-2 text-slate-400">— System</span>
+            </div>
+          )}
+          {transfersEnabled && !withdrawalsEnabled && (
+            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs">
+              <span className="font-semibold text-amber-800">Withdrawals: </span>
+              <span className="text-amber-700">{flagsQuery.data?.withdrawals.reason || "Withdrawals"} temporarily unavailable. {flagsQuery.data?.withdrawals.details || ""}</span>
+              <span className="ml-2 text-slate-400">— System</span>
+            </div>
+          )}
+
+          {transfersEnabled && <div>
           <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium">
             {(["internal", "ach", "zelle", "applepay", "chime"] as TransferMethod[]).map((m) => (
               <button key={m} type="button" onClick={() => setMethod(m)} className={`flex-1 min-w-[64px] rounded-md py-1.5 capitalize transition ${method === m ? "bg-white text-red-700 shadow-sm" : "text-slate-600"}`}>
@@ -280,6 +315,7 @@ function Dashboard() {
               {status && <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{status}</div>}
             </div>
           </form>
+          </div>}
         </section>
 
         {/* Transaction history */}

@@ -64,6 +64,27 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    to: "/admin/grants" as const,
+    label: "Grants",
+    exact: false,
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    ),
+  },
+  {
+    to: "/admin/features" as const,
+    label: "Controls",
+    exact: false,
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" /><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2" />
+      </svg>
+    ),
+  },
 ];
 
 function AdminLayout() {

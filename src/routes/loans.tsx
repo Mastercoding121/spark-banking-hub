@@ -6,6 +6,7 @@ import { BankShell } from "@/components/BankShell";
 import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
 import { useHolder } from "@/lib/store";
 import { authStore } from "@/lib/auth";
+import { getFeatureFlags } from "@/lib/feature-flags.functions";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
@@ -170,6 +171,9 @@ function LoansPage() {
   const holder = useHolder();
   const currentUser = authStore.current();
 
+  const flagsFn = useServerFn(getFeatureFlags);
+  const apply = useServerFn(submitLoanApplication);
+
   const [selected, setSelected] = useState<LoanProduct>(PRODUCTS[0]);
   const [amount, setAmount] = useState(10000);
   const [term, setTerm] = useState(PRODUCTS[0].terms[2]);
@@ -183,8 +187,10 @@ function LoansPage() {
     if (currentUser?.email && !email) setEmail(currentUser.email);
   }, [holder, currentUser]);
 
-  const apply = useServerFn(submitLoanApplication);
+  const flagsQuery = useQuery({ queryKey: ["feature-flags"], queryFn: () => flagsFn({}), staleTime: 30_000 });
+
   const myRefs = useLoanRefs();
+  const loansFlag = flagsQuery.data?.loans;
 
   const mutation = useMutation({
     mutationFn: (vars: { productId: string; amount: number; termMonths: number; fullName: string; email: string }) =>
@@ -203,6 +209,24 @@ function LoansPage() {
     setAmount(Math.max(p.minAmount, Math.min(amount, p.maxAmount)));
     if (!p.terms.includes(term)) setTerm(p.terms[Math.floor(p.terms.length / 2)]);
   };
+
+  if (flagsQuery.data && !loansFlag?.enabled) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-7xl px-4 py-16">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-3xl">⚙️</div>
+            <h2 className="text-xl font-bold text-slate-800">Loans Temporarily Unavailable</h2>
+            {loansFlag?.reason && <p className="mt-2 text-sm font-semibold text-amber-700">{loansFlag.reason}</p>}
+            <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+              {loansFlag?.details || "Loan services are temporarily unavailable. Please check back later or contact support for assistance."}
+            </p>
+            <div className="mt-5 rounded-lg border border-slate-100 bg-slate-50 px-4 py-2 text-[11px] text-slate-400">— System</div>
+          </div>
+        </main>
+      </BankShell>
+    );
+  }
 
   return (
     <BankShell>

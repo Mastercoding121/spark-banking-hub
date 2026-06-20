@@ -351,6 +351,44 @@ export const runSchemaMigration = createServerFn({ method: "POST" }).handler(asy
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`,
     },
+    {
+      name: "feature_flags",
+      sql: `CREATE TABLE IF NOT EXISTS feature_flags (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        feature_key TEXT UNIQUE NOT NULL,
+        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        reason TEXT,
+        details TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "grants",
+      sql: `CREATE TABLE IF NOT EXISTS grants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        amount NUMERIC(15,2) NOT NULL,
+        eligibility_text TEXT,
+        deadline DATE,
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "grant_applications",
+      sql: `CREATE TABLE IF NOT EXISTS grant_applications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        grant_id UUID NOT NULL REFERENCES grants(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        purpose TEXT NOT NULL,
+        amount_requested NUMERIC(15,2) NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
   ];
 
   const INDEXES = [
@@ -363,7 +401,20 @@ export const runSchemaMigration = createServerFn({ method: "POST" }).handler(asy
     "CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)",
     "CREATE INDEX IF NOT EXISTS idx_support_messages_ticket_id ON support_messages(ticket_id)",
+    "CREATE INDEX IF NOT EXISTS idx_grant_applications_user_id ON grant_applications(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_grant_applications_grant_id ON grant_applications(grant_id)",
   ];
+
+  // Seed default feature flags
+  const FLAG_KEYS = ["investments", "grants", "deposits", "withdrawals", "transfers", "loans"];
+  for (const key of FLAG_KEYS) {
+    try {
+      await query(
+        `INSERT INTO feature_flags (feature_key, enabled) VALUES ($1, TRUE) ON CONFLICT (feature_key) DO NOTHING`,
+        [key]
+      );
+    } catch {}
+  }
 
   const results: { name: string; status: "ok" | "error"; message: string }[] = [];
 
@@ -575,6 +626,166 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
     const result = await query(
       "UPDATE loan_applications SET status = $1, updated_at = NOW() WHERE id = $2",
       [data.status, data.loanId]
+    );
+    return { ok: true };
+  });
+
+// ─── adminUpdateUserCreatedAt ─────────────────────────────────────────────────
+export const adminUpdateUserCreatedAt = createServerFn({ method: "POST" })
+  .inputValidator((input: { userId: string; createdAt: string }) => {
+    if (!input.userId) throw new Error("User ID required");
+    if (!input.createdAt) throw new Error("Date required");
+    const d = new Date(input.createdAt);
+    if (isNaN(d.getTime())) throw new Error("Invalid date");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query("UPDATE users SET created_at = $1 WHERE id = $2", [data.createdAt, data.userId]);
+    return { ok: true };
+  });
+
+// ─── Feature Flags ────────────────────────────────────────────────────────────
+export const adminGetFeatureFlags = createServerFn({ method: "GET" }).handler(async () => {
+  await requireAdmin();
+  const rows = await query<{
+    feature_key: string; enabled: boolean; reason: string | null;
+    details: string | null; updated_at: string;
+  }>("SELECT feature_key, enabled, reason, details, updated_at FROM feature_flags ORDER BY feature_key");
+  return rows.map((r) => ({
+    key: r.feature_key, enabled: r.enabled,
+    reason: r.reason, details: r.details, updatedAt: r.updated_at,
+  }));
+});
+
+export const adminSetFeatureFlag = createServerFn({ method: "POST" })
+  .inputValidator((input: { key: string; enabled: boolean; reason?: string; details?: string }) => {
+    if (!input.key?.trim()) throw new Error("Feature key required");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query(
+      `INSERT INTO feature_flags (feature_key, enabled, reason, details)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (feature_key) DO UPDATE SET enabled = $2, reason = $3, details = $4, updated_at = NOW()`,
+      [data.key, data.enabled, data.reason ?? null, data.details ?? null]
+    );
+    return { ok: true };
+  });
+
+// ─── Grants (Admin) ───────────────────────────────────────────────────────────
+export const adminListGrants = createServerFn({ method: "GET" }).handler(async () => {
+  await requireAdmin();
+  const rows = await query<{
+    id: string; title: string; description: string; amount: string;
+    eligibility_text: string | null; deadline: string | null;
+    status: string; created_at: string;
+    app_count: string;
+  }>(
+    `SELECT g.id, g.title, g.description, g.amount, g.eligibility_text, g.deadline, g.status, g.created_at,
+       COUNT(ga.id)::TEXT as app_count
+     FROM grants g LEFT JOIN grant_applications ga ON ga.grant_id = g.id
+     GROUP BY g.id ORDER BY g.created_at DESC`
+  );
+  return rows.map((r) => ({
+    id: r.id, title: r.title, description: r.description,
+    amount: parseFloat(r.amount), eligibilityText: r.eligibility_text,
+    deadline: r.deadline ? r.deadline.split("T")[0] : null,
+    status: r.status, createdAt: r.created_at,
+    applicationCount: parseInt(r.app_count ?? "0"),
+  }));
+});
+
+export const adminCreateGrant = createServerFn({ method: "POST" })
+  .inputValidator((input: { title: string; description: string; amount: number; eligibilityText?: string; deadline?: string }) => {
+    if (!input.title?.trim()) throw new Error("Title required");
+    if (!input.description?.trim()) throw new Error("Description required");
+    if (!input.amount || input.amount <= 0) throw new Error("Amount must be > 0");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    const row = await queryOne<{ id: string }>(
+      `INSERT INTO grants (title, description, amount, eligibility_text, deadline, status)
+       VALUES ($1, $2, $3, $4, $5, 'active') RETURNING id`,
+      [data.title.trim(), data.description.trim(), data.amount, data.eligibilityText ?? null, data.deadline ?? null]
+    );
+    return { ok: true, id: row!.id };
+  });
+
+export const adminUpdateGrant = createServerFn({ method: "POST" })
+  .inputValidator((input: {
+    grantId: string; title: string; description: string; amount: number;
+    eligibilityText?: string; deadline?: string; status: string;
+  }) => {
+    if (!input.grantId) throw new Error("Grant ID required");
+    if (!input.title?.trim()) throw new Error("Title required");
+    if (!input.amount || input.amount <= 0) throw new Error("Amount must be > 0");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query(
+      `UPDATE grants SET title=$1, description=$2, amount=$3, eligibility_text=$4, deadline=$5, status=$6, updated_at=NOW()
+       WHERE id=$7`,
+      [data.title.trim(), data.description.trim(), data.amount, data.eligibilityText ?? null, data.deadline ?? null, data.status, data.grantId]
+    );
+    return { ok: true };
+  });
+
+export const adminDeleteGrant = createServerFn({ method: "POST" })
+  .inputValidator((input: { grantId: string }) => {
+    if (!input.grantId) throw new Error("Grant ID required");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query("DELETE FROM grants WHERE id = $1", [data.grantId]);
+    return { ok: true };
+  });
+
+export const adminListGrantApplications = createServerFn({ method: "GET" })
+  .inputValidator((input: { grantId?: string }) => input)
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    const rows = await query<{
+      id: string; grant_id: string; grant_title: string; user_id: string; user_name: string;
+      user_email: string; purpose: string; amount_requested: string; status: string; created_at: string;
+    }>(
+      data.grantId
+        ? `SELECT ga.id, ga.grant_id, g.title as grant_title, ga.user_id, u.name as user_name, u.email as user_email,
+             ga.purpose, ga.amount_requested, ga.status, ga.created_at
+           FROM grant_applications ga
+           JOIN grants g ON g.id = ga.grant_id
+           JOIN users u ON u.id = ga.user_id
+           WHERE ga.grant_id = $1 ORDER BY ga.created_at DESC`
+        : `SELECT ga.id, ga.grant_id, g.title as grant_title, ga.user_id, u.name as user_name, u.email as user_email,
+             ga.purpose, ga.amount_requested, ga.status, ga.created_at
+           FROM grant_applications ga
+           JOIN grants g ON g.id = ga.grant_id
+           JOIN users u ON u.id = ga.user_id
+           ORDER BY ga.created_at DESC LIMIT 200`,
+      data.grantId ? [data.grantId] : []
+    );
+    return rows.map((r) => ({
+      id: r.id, grantId: r.grant_id, grantTitle: r.grant_title,
+      userId: r.user_id, userName: r.user_name, userEmail: r.user_email,
+      purpose: r.purpose, amountRequested: parseFloat(r.amount_requested),
+      status: r.status, createdAt: r.created_at,
+    }));
+  });
+
+export const adminUpdateGrantApplication = createServerFn({ method: "POST" })
+  .inputValidator((input: { applicationId: string; status: "approved" | "rejected" }) => {
+    if (!["approved", "rejected"].includes(input.status)) throw new Error("Invalid status");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query(
+      "UPDATE grant_applications SET status = $1, updated_at = NOW() WHERE id = $2",
+      [data.status, data.applicationId]
     );
     return { ok: true };
   });

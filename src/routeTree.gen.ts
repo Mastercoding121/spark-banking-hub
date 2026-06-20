@@ -15,6 +15,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
+import { Route as GrantsRouteImport } from './routes/grants'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
@@ -25,6 +26,8 @@ import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminTransactionsRouteImport } from './routes/admin/transactions'
 import { Route as AdminSupportRouteImport } from './routes/admin/support'
 import { Route as AdminLoansRouteImport } from './routes/admin/loans'
+import { Route as AdminGrantsRouteImport } from './routes/admin/grants'
+import { Route as AdminFeaturesRouteImport } from './routes/admin/features'
 import { Route as AdminUsersUserIdRouteImport } from './routes/admin/users.$userId'
 
 const VerifyRoute = VerifyRouteImport.update({
@@ -55,6 +58,11 @@ const LoansRoute = LoansRouteImport.update({
 const InvestmentsRoute = InvestmentsRouteImport.update({
   id: '/investments',
   path: '/investments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GrantsRoute = GrantsRouteImport.update({
+  id: '/grants',
+  path: '/grants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -107,6 +115,16 @@ const AdminLoansRoute = AdminLoansRouteImport.update({
   path: '/loans',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminGrantsRoute = AdminGrantsRouteImport.update({
+  id: '/grants',
+  path: '/grants',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminFeaturesRoute = AdminFeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminUsersUserIdRoute = AdminUsersUserIdRouteImport.update({
   id: '/$userId',
   path: '/$userId',
@@ -118,12 +136,15 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
+  '/admin/features': typeof AdminFeaturesRoute
+  '/admin/grants': typeof AdminGrantsRoute
   '/admin/loans': typeof AdminLoansRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/transactions': typeof AdminTransactionsRoute
@@ -136,12 +157,15 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
+  '/admin/features': typeof AdminFeaturesRoute
+  '/admin/grants': typeof AdminGrantsRoute
   '/admin/loans': typeof AdminLoansRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/transactions': typeof AdminTransactionsRoute
@@ -156,12 +180,15 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
+  '/admin/features': typeof AdminFeaturesRoute
+  '/admin/grants': typeof AdminGrantsRoute
   '/admin/loans': typeof AdminLoansRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/transactions': typeof AdminTransactionsRoute
@@ -177,12 +204,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/forgot-password'
+    | '/grants'
     | '/investments'
     | '/loans'
     | '/profile'
     | '/signup'
     | '/support'
     | '/verify'
+    | '/admin/features'
+    | '/admin/grants'
     | '/admin/loans'
     | '/admin/support'
     | '/admin/transactions'
@@ -195,12 +225,15 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/forgot-password'
+    | '/grants'
     | '/investments'
     | '/loans'
     | '/profile'
     | '/signup'
     | '/support'
     | '/verify'
+    | '/admin/features'
+    | '/admin/grants'
     | '/admin/loans'
     | '/admin/support'
     | '/admin/transactions'
@@ -214,12 +247,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/forgot-password'
+    | '/grants'
     | '/investments'
     | '/loans'
     | '/profile'
     | '/signup'
     | '/support'
     | '/verify'
+    | '/admin/features'
+    | '/admin/grants'
     | '/admin/loans'
     | '/admin/support'
     | '/admin/transactions'
@@ -234,6 +270,7 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GrantsRoute: typeof GrantsRoute
   InvestmentsRoute: typeof InvestmentsRoute
   LoansRoute: typeof LoansRoute
   ProfileRoute: typeof ProfileRoute
@@ -285,6 +322,13 @@ declare module '@tanstack/react-router' {
       path: '/investments'
       fullPath: '/investments'
       preLoaderRoute: typeof InvestmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/grants': {
+      id: '/grants'
+      path: '/grants'
+      fullPath: '/grants'
+      preLoaderRoute: typeof GrantsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -357,6 +401,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoansRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/grants': {
+      id: '/admin/grants'
+      path: '/grants'
+      fullPath: '/admin/grants'
+      preLoaderRoute: typeof AdminGrantsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/features': {
+      id: '/admin/features'
+      path: '/features'
+      fullPath: '/admin/features'
+      preLoaderRoute: typeof AdminFeaturesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/users/$userId': {
       id: '/admin/users/$userId'
       path: '/$userId'
@@ -380,6 +438,8 @@ const AdminUsersRouteWithChildren = AdminUsersRoute._addFileChildren(
 )
 
 interface AdminRouteRouteChildren {
+  AdminFeaturesRoute: typeof AdminFeaturesRoute
+  AdminGrantsRoute: typeof AdminGrantsRoute
   AdminLoansRoute: typeof AdminLoansRoute
   AdminSupportRoute: typeof AdminSupportRoute
   AdminTransactionsRoute: typeof AdminTransactionsRoute
@@ -388,6 +448,8 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminFeaturesRoute: AdminFeaturesRoute,
+  AdminGrantsRoute: AdminGrantsRoute,
   AdminLoansRoute: AdminLoansRoute,
   AdminSupportRoute: AdminSupportRoute,
   AdminTransactionsRoute: AdminTransactionsRoute,
@@ -404,6 +466,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  GrantsRoute: GrantsRoute,
   InvestmentsRoute: InvestmentsRoute,
   LoansRoute: LoansRoute,
   ProfileRoute: ProfileRoute,
