@@ -15,7 +15,7 @@ export const Route = createFileRoute("/support")({
   component: SupportPage,
 });
 
-const SUPPORT_EMAIL = "support@firestonebank.us";
+const SUPPORT_EMAIL = "support@finexthub.com";
 
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; at: string };
 
@@ -147,7 +147,7 @@ function SupportPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <ContactTile icon="☎" label="Call us" value="1-800-FIRESTONE" sub="Toll-free, 24/7" />
+          <ContactTile icon="☎" label="Call us" value="1-800-FINEXTHUB" sub="Toll-free, 24/7" />
           <ContactTile icon="✉" label="Email" value={SUPPORT_EMAIL} sub="Replies in &lt; 2 hours" href={`mailto:${SUPPORT_EMAIL}`} />
           <ContactTile icon="💬" label="Live chat" value="Talk to Ember" sub="Avg reply: instant" />
         </div>

@@ -2,31 +2,89 @@ import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { ReactNode } from "react";
 import { holderStore, useHolder } from "@/lib/store";
-import { authStore, useAuthSession } from "@/lib/auth";
+import { authStore } from "@/lib/auth";
 import { signOut } from "@/lib/user.functions";
 
 function Logo() {
   return (
-    <div className="relative h-12 w-12">
-      <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/30" />
+    <div className="relative h-10 w-10 shrink-0">
       <div className="absolute inset-0 animate-[spin_6s_linear_infinite] rounded-full bg-[conic-gradient(from_0deg,theme(colors.amber.300),theme(colors.red.500),theme(colors.amber.300))] p-[2px]">
-        <div className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-red-900 to-red-950 shadow-inner">
-          <svg viewBox="0 0 24 24" className="h-7 w-7 text-amber-300 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-red-900 to-red-950">
+          <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber-300" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="rgba(251,191,36,0.15)" />
             <path d="M8.5 12 h7 M8.5 14.5 h7 M12 9 v8" />
             <circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none" />
           </svg>
-          <span className="pointer-events-none absolute -right-0.5 -top-0.5 h-2 w-2 animate-pulse rounded-full bg-white shadow-[0_0_8px_2px_rgba(255,255,255,0.8)]" />
         </div>
       </div>
     </div>
   );
 }
 
+const NAV_LINKS = [
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/loans", label: "Loans" },
+  { to: "/investments", label: "Investments" },
+  { to: "/support", label: "Support" },
+];
+
+const BOTTOM_NAV = [
+  {
+    to: "/dashboard",
+    label: "Home",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
+        <path d="M9 21V12h6v9" />
+      </svg>
+    ),
+  },
+  {
+    to: "/loans",
+    label: "Loans",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="9" width="18" height="12" rx="1" />
+        <path d="M3 9l9-6 9 6" />
+        <line x1="9" y1="21" x2="9" y2="9" />
+        <line x1="15" y1="21" x2="15" y2="9" />
+      </svg>
+    ),
+  },
+  {
+    to: "/investments",
+    label: "Invest",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+        <polyline points="16 7 22 7 22 13" />
+      </svg>
+    ),
+  },
+  {
+    to: "/support",
+    label: "Support",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+      </svg>
+    ),
+  },
+  {
+    to: "/profile",
+    label: "Profile",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+      </svg>
+    ),
+  },
+];
+
 export function BankShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const showBack = pathname !== "/" && pathname !== "/dashboard";
   const holder = useHolder();
   const currentUser = authStore.current();
   const signOutFn = useServerFn(signOut);
@@ -38,72 +96,144 @@ export function BankShell({ children }: { children: ReactNode }) {
     router.navigate({ to: "/" });
   };
 
+  const isActive = (to: string) =>
+    to === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(to);
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <header className="bg-gradient-to-r from-red-700 via-red-800 to-red-900 text-white shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            {showBack && (
-              <button
-                onClick={() => router.history.back()}
-                aria-label="Go back"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-base hover:bg-white/20 sm:h-9 sm:w-9 sm:text-lg"
+
+      {/* ── Sticky Header ──────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-red-700 via-red-800 to-red-900 text-white shadow-lg">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
+
+          {/* Brand */}
+          <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5">
+            <Logo />
+            <div className="hidden leading-tight sm:block">
+              <div className="text-base font-bold tracking-tight">FINEXTHUB</div>
+              <div className="text-[9px] uppercase tracking-[0.25em] opacity-70">Bank of USA</div>
+            </div>
+          </Link>
+
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map(({ to, label }) => (
+              <Link
+                key={to}
+                to={to}
+                className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+                  isActive(to)
+                    ? "bg-white/20 text-white"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
               >
-                ←
-              </button>
-            )}
-            <Link to="/dashboard" className="flex min-w-0 items-center gap-2 sm:gap-3">
-              <Logo />
-              <div className="min-w-0 leading-tight">
-                <div className="truncate text-sm font-bold tracking-tight sm:text-lg">FINEXTHUB</div>
-                <div className="text-[9px] uppercase tracking-widest opacity-80 sm:text-[10px]">Bank of USA</div>
-              </div>
-            </Link>
-          </div>
-          <nav className="hidden items-center gap-4 text-xs font-medium md:flex">
-            <Link to="/dashboard" className="opacity-90 hover:opacity-100">Dashboard</Link>
-            <Link to="/loans" className="opacity-90 hover:opacity-100">Loans</Link>
-            <Link to="/investments" className="opacity-90 hover:opacity-100">Investments</Link>
+                {label}
+              </Link>
+            ))}
             {currentUser?.isAdmin && (
-              <Link to="/admin" className="rounded-md bg-amber-400/20 px-2 py-1 text-amber-300 hover:bg-amber-400/30">Admin</Link>
+              <Link
+                to="/admin"
+                className="ml-1 rounded-md bg-amber-400/20 px-3 py-1.5 text-[13px] font-medium text-amber-300 hover:bg-amber-400/30"
+              >
+                Admin
+              </Link>
             )}
           </nav>
-          <div className="flex shrink-0 items-center gap-1.5 text-sm sm:gap-2">
-            <div className="hidden text-right leading-tight md:block">
-              <div className="text-[10px] uppercase tracking-widest opacity-70">Account Holder</div>
+
+          {/* Right: holder + avatar + logout */}
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden text-right leading-tight lg:block">
+              <div className="text-[10px] uppercase tracking-widest opacity-60">Account Holder</div>
               <div className="max-w-[140px] truncate text-sm font-semibold">{holder || "Guest"}</div>
             </div>
-            <Link to="/profile" aria-label="Profile" title="Profile & Security" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-xs font-bold ring-1 ring-white/20 hover:bg-white/25 sm:h-9 sm:w-9 sm:text-sm">
-              {(holder?.trim()?.[0] || "G").toUpperCase()}
+            <Link
+              to="/profile"
+              aria-label="Profile"
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ring-2 transition sm:h-9 sm:w-9 sm:text-sm ${
+                pathname === "/profile"
+                  ? "bg-white text-red-700 ring-white"
+                  : "bg-white/15 text-white ring-white/20 hover:bg-white/25"
+              }`}
+            >
+              {(holder?.trim()?.[0] || currentUser?.email?.[0] || "G").toUpperCase()}
             </Link>
-            <button onClick={handleLogout} className="rounded-md bg-white/10 px-2.5 py-1.5 text-[11px] font-medium hover:bg-white/20 sm:px-3 sm:text-xs">Logout</button>
+            <button
+              onClick={handleLogout}
+              className="hidden rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-white/20 sm:block"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+
+        {/* Security notice bar */}
+        <div className="border-t border-white/10 bg-black/20">
+          <div className="mx-auto flex max-w-7xl items-center gap-1.5 px-4 py-1 text-[11px] text-white/50">
+            <svg className="h-3 w-3 shrink-0 text-amber-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+            <span><span className="text-amber-400/80">Secure Session</span> · 256-bit SSL · FDIC Insured up to $250,000</span>
           </div>
         </div>
       </header>
-      <div className="border-b border-amber-200 bg-amber-50">
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2 text-xs text-amber-900">
-          <span>🔒</span>
-          <span><strong>Security Notice:</strong> 256-bit SSL encrypted session.</span>
-        </div>
+
+      {/* ── Page content (extra bottom padding on mobile for bottom nav) ── */}
+      <div className="pb-20 md:pb-0">
+        {children}
       </div>
-      {children}
-      <footer className="mt-8 border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl space-y-3 px-4 py-6">
-          <Link to="/support" className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4 transition hover:border-red-300 hover:shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-xl text-red-700">💬</div>
-              <div>
-                <div className="text-sm font-semibold">24/7 Customer Support</div>
-                <div className="text-xs text-slate-500">Chat with Ember, our virtual assistant, or open a ticket — any time, day or night.</div>
+
+      {/* ── Footer (desktop only) ─────────────────────────────── */}
+      <div className="hidden md:block">
+        <footer className="mt-8 border-t border-slate-200 bg-white">
+          <div className="mx-auto max-w-7xl space-y-3 px-4 py-6">
+            <Link
+              to="/support"
+              className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4 transition hover:border-red-300 hover:shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-xl text-red-700">💬</div>
+                <div>
+                  <div className="text-sm font-semibold">24/7 Customer Support</div>
+                  <div className="text-xs text-slate-500">Chat with Ember or open a ticket — any time, day or night.</div>
+                </div>
               </div>
+              <span className="text-slate-400">›</span>
+            </Link>
+            <div className="text-center text-xs text-slate-500">
+              © 2026 FinextHub Bank of USA · Member FDIC · Equal Housing Lender
             </div>
-            <span className="text-slate-400">›</span>
-          </Link>
-          <div className="text-center text-xs text-slate-500">
-            © 2026 FinextHub Bank of USA. Member FDIC. Equal Housing Lender.
           </div>
+        </footer>
+      </div>
+
+      {/* ── Mobile Bottom Navigation ──────────────────────────── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden">
+        <div className="flex items-stretch">
+          {BOTTOM_NAV.map(({ to, label, icon }) => {
+            const active = isActive(to);
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
+                  active ? "text-red-700" : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <span className={`transition-transform ${active ? "scale-110" : ""}`}>
+                  {icon}
+                </span>
+                <span className={`text-[10px] font-medium ${active ? "text-red-700" : ""}`}>
+                  {label}
+                </span>
+                {active && (
+                  <span className="absolute top-0 h-0.5 w-8 rounded-full bg-red-700" style={{ marginTop: -1 }} />
+                )}
+              </Link>
+            );
+          })}
         </div>
-      </footer>
+      </nav>
     </div>
   );
 }

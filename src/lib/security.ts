@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
-const PIN_KEY = "firestone.security.pin.v1";
-const BIO_KEY = "firestone.security.bio.v1";
+const PIN_KEY = "fnx.security.pin.v1";
+const BIO_KEY = "fnx.security.bio.v1";
 
 type State = { pin: string; biometrics: boolean };
 
@@ -15,16 +15,31 @@ function read(): State {
   } catch { return { pin: "", biometrics: false }; }
 }
 
-let state = read();
+// Start empty for SSR compatibility; hydrate on first subscribe
+let state: State = { pin: "", biometrics: false };
+let hydrated = false;
+const SERVER_SNAPSHOT: State = { pin: "", biometrics: false };
 const listeners = new Set<() => void>();
 function emit() { listeners.forEach((l) => l()); }
 
 export const securityStore = {
-  subscribe(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; },
+  subscribe(l: () => void) {
+    if (!hydrated) {
+      hydrated = true;
+      const stored = read();
+      if (stored.pin || stored.biometrics) {
+        state = stored;
+        Promise.resolve().then(() => emit());
+      }
+    }
+    listeners.add(l);
+    return () => { listeners.delete(l); };
+  },
   getSnapshot() { return state; },
-  getServerSnapshot() { return { pin: "", biometrics: false } as State; },
+  getServerSnapshot() { return SERVER_SNAPSHOT; },
   setPin(pin: string) {
     state = { ...state, pin };
+    hydrated = true;
     if (typeof window !== "undefined") {
       try {
         if (pin) window.localStorage.setItem(PIN_KEY, pin);
@@ -35,6 +50,7 @@ export const securityStore = {
   },
   setBiometrics(on: boolean) {
     state = { ...state, biometrics: on };
+    hydrated = true;
     if (typeof window !== "undefined") {
       try { window.localStorage.setItem(BIO_KEY, on ? "1" : "0"); } catch {}
     }
@@ -65,11 +81,10 @@ export async function requestBiometric(): Promise<boolean> {
           } as any);
           return true;
         } catch {
-          // User likely has no platform credential — fall through to simulated prompt
+          // fall through to confirm dialog
         }
       }
     }
   } catch {}
-  // Simulated biometric on devices without WebAuthn (demo)
   return window.confirm("Use Face ID / Touch ID to authorize this transaction?");
 }
