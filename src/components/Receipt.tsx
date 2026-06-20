@@ -10,7 +10,7 @@ function downloadReceiptPdf(r: ReceiptData) {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.text("FIRESTONE BANK OF USA", 40, 40);
+  doc.text("FINEXTHUB BANK OF USA", 40, 40);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text("Official Transaction Receipt", 40, 58);
@@ -54,7 +54,7 @@ function downloadReceiptPdf(r: ReceiptData) {
   doc.setTextColor(120);
   doc.text("Thank you for banking with FinextHub · Member FDIC · Equal Housing Lender", 40, y + 28);
 
-  doc.save(`firestone-receipt-${r.reference}.pdf`);
+  doc.save(`finexthub-receipt-${r.reference}.pdf`);
 }
 
 export type ReceiptData = {

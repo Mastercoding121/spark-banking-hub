@@ -32,6 +32,7 @@ function VerifyPage() {
   const [emailSent, setEmailSent] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const hasSentRef = useRef(false);
 
   const sendFn = useServerFn(sendOtp);
   const verifyFn = useServerFn(verifyOtp);
@@ -67,6 +68,9 @@ function VerifyPage() {
       navigate({ to: "/dashboard" });
       return;
     }
+    // Guard against React StrictMode double-mount firing two OTP emails
+    if (hasSentRef.current) return;
+    hasSentRef.current = true;
     const user = authStore.current();
     sendMut.mutate({ email, name: user?.name });
   }, []);

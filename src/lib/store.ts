@@ -12,15 +12,31 @@ function readHolder(): string {
   try { return window.localStorage.getItem(HOLDER_KEY) ?? ""; } catch { return ""; }
 }
 
-let holder = readHolder();
+// Start with "" to match server snapshot — loaded from localStorage on first subscribe
+let holder = "";
+let holderHydrated = false;
 const holderListeners = new Set<() => void>();
 
 export const holderStore = {
-  subscribe(l: () => void) { holderListeners.add(l); return () => { holderListeners.delete(l); }; },
+  subscribe(l: () => void) {
+    // Defer localStorage read until after hydration (first subscribe call is post-mount)
+    if (!holderHydrated) {
+      holderHydrated = true;
+      const stored = readHolder();
+      if (stored && stored !== holder) {
+        holder = stored;
+        // Notify after this tick so the subscription is registered first
+        Promise.resolve().then(() => holderListeners.forEach((fn) => fn()));
+      }
+    }
+    holderListeners.add(l);
+    return () => { holderListeners.delete(l); };
+  },
   getSnapshot() { return holder; },
   getServerSnapshot() { return ""; },
   set(name: string) {
     holder = name;
+    holderHydrated = true;
     if (typeof window !== "undefined") {
       try {
         if (name) window.localStorage.setItem(HOLDER_KEY, name);
