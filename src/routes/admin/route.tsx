@@ -54,6 +54,16 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    to: "/admin/support" as const,
+    label: "Support",
+    exact: false,
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+      </svg>
+    ),
+  },
 ];
 
 function AdminLayout() {
@@ -184,8 +194,8 @@ function AdminLayout() {
         {/* Top bar */}
         <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-900/80 backdrop-blur-md px-6 py-3">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-white/40">
-              {new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            <div className="text-xs text-white/40" suppressHydrationWarning>
+              {typeof window !== "undefined" ? new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}
             </div>
             <div className="flex items-center gap-2 text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />

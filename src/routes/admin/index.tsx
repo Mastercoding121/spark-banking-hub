@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { getAdminStats, getRecentActivity } from "@/lib/admin.functions";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { getAdminStats, getRecentActivity, runSchemaMigration } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Admin Overview — FinextHub" }] }),
@@ -18,6 +19,10 @@ const LOAN_COLORS: Record<string, string> = {
 function AdminOverview() {
   const statsFn = useServerFn(getAdminStats);
   const activityFn = useServerFn(getRecentActivity);
+  const schemaMigrateFn = useServerFn(runSchemaMigration);
+
+  const [schemaResults, setSchemaResults] = useState<{ name: string; status: "ok" | "error"; message: string }[] | null>(null);
+  const [schemaAt, setSchemaAt] = useState<string | null>(null);
 
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ["admin-stats"],
@@ -29,6 +34,14 @@ function AdminOverview() {
     queryKey: ["admin-activity"],
     queryFn: () => activityFn({}),
     refetchInterval: 20_000,
+  });
+
+  const schemaMutation = useMutation({
+    mutationFn: () => schemaMigrateFn({}),
+    onSuccess: (data) => {
+      setSchemaResults(data.results);
+      setSchemaAt(data.at);
+    },
   });
 
   const cards = [
@@ -207,6 +220,75 @@ function AdminOverview() {
 
         </div>
       </div>
+
+      {/* ── Database / Schema Sync ─────────────────────────────── */}
+      <div>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">Database</h2>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" /><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
+                </svg>
+                <span className="text-sm font-semibold">Schema Sync</span>
+              </div>
+              <p className="mt-1 text-xs text-white/40">
+                Runs <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">CREATE TABLE IF NOT EXISTS</code> for all 7 tables and 9 indexes. Safe to run at any time — will not overwrite existing data.
+              </p>
+            </div>
+            <button
+              onClick={() => schemaMutation.mutate()}
+              disabled={schemaMutation.isPending}
+              className="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {schemaMutation.isPending ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeDasharray="60" strokeDashoffset="20" /></svg>
+                  Running…
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                  Run Schema Sync
+                </>
+              )}
+            </button>
+          </div>
+
+          {schemaMutation.isError && (
+            <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-400">
+              {(schemaMutation.error as Error)?.message ?? "Migration failed."}
+            </div>
+          )}
+
+          {schemaResults && (
+            <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-white/60">Migration Results</span>
+                {schemaAt && <span className="text-[10px] text-white/30">{new Date(schemaAt).toLocaleTimeString()}</span>}
+              </div>
+              <div className="space-y-1">
+                {schemaResults.map((r) => (
+                  <div key={r.name} className="flex items-center gap-2 text-xs">
+                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${r.status === "ok" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
+                      {r.status === "ok" ? "✓" : "✗"}
+                    </span>
+                    <span className="w-36 font-mono text-white/60">{r.name}</span>
+                    <span className={r.status === "ok" ? "text-emerald-400/60" : "text-red-400"}>{r.message}</span>
+                  </div>
+                ))}
+              </div>
+              <div className={`mt-2 text-[11px] font-semibold ${schemaResults.every(r => r.status === "ok") ? "text-emerald-400" : "text-amber-400"}`}>
+                {schemaResults.every(r => r.status === "ok")
+                  ? `✓ All ${schemaResults.length} tables synced successfully`
+                  : `⚠ ${schemaResults.filter(r => r.status === "error").length} table(s) had errors`}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }

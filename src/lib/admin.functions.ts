@@ -256,6 +256,213 @@ export const listAllTransactions = createServerFn({ method: "GET" }).handler(asy
   }));
 });
 
+// ─── runSchemaMigration ───────────────────────────────────────────────────────
+export const runSchemaMigration = createServerFn({ method: "POST" }).handler(async () => {
+  await requireAdmin();
+
+  const TABLES = [
+    {
+      name: "users",
+      sql: `CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        security_question TEXT,
+        security_answer_hash TEXT,
+        is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+        verified BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "sessions",
+      sql: `CREATE TABLE IF NOT EXISTS sessions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "accounts",
+      sql: `CREATE TABLE IF NOT EXISTS accounts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL CHECK (type IN ('checking', 'savings')),
+        balance NUMERIC(15,2) NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, type)
+      )`,
+    },
+    {
+      name: "transactions",
+      sql: `CREATE TABLE IF NOT EXISTS transactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        account_type TEXT NOT NULL,
+        date DATE NOT NULL DEFAULT CURRENT_DATE,
+        description TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'Other',
+        amount NUMERIC(15,2) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "loan_applications",
+      sql: `CREATE TABLE IF NOT EXISTS loan_applications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        reference_id TEXT UNIQUE NOT NULL,
+        product_id TEXT NOT NULL,
+        amount NUMERIC(15,2) NOT NULL,
+        term_months INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'submitted',
+        history JSONB NOT NULL DEFAULT '[]',
+        documents JSONB NOT NULL DEFAULT '[]',
+        underwriting_notes JSONB NOT NULL DEFAULT '[]',
+        submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "support_tickets",
+      sql: `CREATE TABLE IF NOT EXISTS support_tickets (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        name TEXT,
+        email TEXT,
+        topic TEXT NOT NULL DEFAULT 'General',
+        status TEXT NOT NULL DEFAULT 'open',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "support_messages",
+      sql: `CREATE TABLE IF NOT EXISTS support_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        ticket_id UUID NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+        sender_role TEXT NOT NULL DEFAULT 'user',
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    },
+  ];
+
+  const INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_loans_email ON loan_applications(email)",
+    "CREATE INDEX IF NOT EXISTS idx_loans_status ON loan_applications(status)",
+    "CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)",
+    "CREATE INDEX IF NOT EXISTS idx_support_messages_ticket_id ON support_messages(ticket_id)",
+  ];
+
+  const results: { name: string; status: "ok" | "error"; message: string }[] = [];
+
+  for (const table of TABLES) {
+    try {
+      await query(table.sql);
+      results.push({ name: table.name, status: "ok", message: "Table ensured" });
+    } catch (e: any) {
+      results.push({ name: table.name, status: "error", message: e?.message ?? "Unknown error" });
+    }
+  }
+
+  for (const idx of INDEXES) {
+    try {
+      await query(idx);
+    } catch {}
+  }
+
+  const errorCount = results.filter((r) => r.status === "error").length;
+  return { ok: errorCount === 0, results, at: new Date().toISOString() };
+});
+
+// ─── adminListTickets ─────────────────────────────────────────────────────────
+export const adminListTickets = createServerFn({ method: "GET" }).handler(async () => {
+  await requireAdmin();
+  const rows = await query<{
+    id: string; user_id: string | null; name: string | null; email: string | null;
+    topic: string; status: string; created_at: string; updated_at: string;
+    message_count: string; latest_content: string | null; latest_role: string | null;
+  }>(
+    `SELECT
+       st.id, st.user_id, st.name, st.email, st.topic, st.status,
+       st.created_at, st.updated_at,
+       COUNT(sm.id)::TEXT as message_count,
+       (SELECT content  FROM support_messages WHERE ticket_id = st.id ORDER BY created_at DESC LIMIT 1) as latest_content,
+       (SELECT sender_role FROM support_messages WHERE ticket_id = st.id ORDER BY created_at DESC LIMIT 1) as latest_role
+     FROM support_tickets st
+     LEFT JOIN support_messages sm ON sm.ticket_id = st.id
+     GROUP BY st.id
+     ORDER BY st.updated_at DESC
+     LIMIT 300`
+  );
+  return rows.map((r) => ({
+    id: r.id, userId: r.user_id, name: r.name ?? "Guest", email: r.email ?? "—",
+    topic: r.topic, status: r.status,
+    createdAt: r.created_at, updatedAt: r.updated_at,
+    messageCount: parseInt(r.message_count ?? "0"),
+    latestContent: r.latest_content,
+    latestRole: r.latest_role as "user" | "bot" | "admin" | null,
+  }));
+});
+
+// ─── adminGetTicketMessages ───────────────────────────────────────────────────
+export const adminGetTicketMessages = createServerFn({ method: "GET" })
+  .inputValidator((input: { ticketId: string }) => {
+    if (!input.ticketId) throw new Error("Ticket ID required");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    const rows = await query<{ id: string; sender_role: string; content: string; created_at: string }>(
+      "SELECT id, sender_role, content, created_at FROM support_messages WHERE ticket_id = $1 ORDER BY created_at ASC",
+      [data.ticketId]
+    );
+    return rows.map((r) => ({
+      id: r.id, role: r.sender_role as "user" | "bot" | "admin",
+      content: r.content, at: r.created_at,
+    }));
+  });
+
+// ─── adminReplyTicket ─────────────────────────────────────────────────────────
+export const adminReplyTicket = createServerFn({ method: "POST" })
+  .inputValidator((input: { ticketId: string; content: string }) => {
+    if (!input.ticketId) throw new Error("Ticket ID required");
+    if (!input.content?.trim()) throw new Error("Message required");
+    return { ...input, content: input.content.trim() };
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query(
+      "INSERT INTO support_messages (ticket_id, sender_role, content) VALUES ($1, 'admin', $2)",
+      [data.ticketId, data.content]
+    );
+    await query("UPDATE support_tickets SET updated_at = NOW() WHERE id = $1", [data.ticketId]);
+    return { ok: true };
+  });
+
+// ─── adminUpdateTicketStatus ──────────────────────────────────────────────────
+export const adminUpdateTicketStatus = createServerFn({ method: "POST" })
+  .inputValidator((input: { ticketId: string; status: "open" | "resolved" }) => {
+    if (!["open", "resolved"].includes(input.status)) throw new Error("Invalid status");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await query("UPDATE support_tickets SET status = $1, updated_at = NOW() WHERE id = $2", [data.status, data.ticketId]);
+    return { ok: true };
+  });
+
 // ─── getRecentActivity ────────────────────────────────────────────────────────
 export const getRecentActivity = createServerFn({ method: "GET" }).handler(async () => {
   await requireAdmin();

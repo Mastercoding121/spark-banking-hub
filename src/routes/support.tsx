@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { BankShell } from "@/components/BankShell";
 import { chatWithBot, submitSupportMessage } from "@/lib/finance.functions";
+import { getOrCreateTicket, sendSupportMessage as persistMessage, getTicketMessages } from "@/lib/support.functions";
 
 export const Route = createFileRoute("/support")({
   head: () => ({
@@ -16,11 +17,19 @@ export const Route = createFileRoute("/support")({
 });
 
 const SUPPORT_EMAIL = "support@finexthub.com";
+const TICKET_KEY = "fnx_support_ticket_id";
 
-type ChatMessage = { id: string; role: "bot" | "user"; text: string; at: string };
+type ChatMessage = { id: string; role: "bot" | "user" | "admin"; text: string; at: string };
 
 function SupportBot() {
   const send = useServerFn(chatWithBot);
+  const createTicketFn = useServerFn(getOrCreateTicket);
+  const persistFn = useServerFn(persistMessage);
+  const pollFn = useServerFn(getTicketMessages);
+
+  const [ticketId, setTicketId] = useState<string | null>(null);
+  const [lastSeen, setLastSeen] = useState<string | null>(null);
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -32,16 +41,69 @@ function SupportBot() {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load existing ticket from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(TICKET_KEY);
+      if (stored) setTicketId(stored);
+    }
+  }, []);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  // Poll for admin replies every 5 seconds when we have a ticket
+  useEffect(() => {
+    if (!ticketId) return;
+    const poll = async () => {
+      try {
+        const newMsgs = await pollFn({ data: { ticketId, since: lastSeen ?? undefined } });
+        const adminMsgs = newMsgs.filter((m) => m.role === "admin");
+        if (adminMsgs.length > 0) {
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const toAdd = adminMsgs
+              .filter((m) => !existingIds.has(m.id))
+              .map((m) => ({ id: m.id, role: "admin" as const, text: m.content, at: m.at }));
+            return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+          });
+          setLastSeen(adminMsgs[adminMsgs.length - 1].at);
+        }
+      } catch {}
+    };
+    const t = setInterval(poll, 5000);
+    return () => clearInterval(t);
+  }, [ticketId, lastSeen]);
+
   const mutation = useMutation({
-    mutationFn: (msg: string) => send({ data: { message: msg } }),
+    mutationFn: async (msg: string) => {
+      // Get/create ticket
+      let tid = ticketId;
+      if (!tid) {
+        const res = await createTicketFn({ data: {} });
+        tid = res.ticketId;
+        setTicketId(tid);
+        if (typeof window !== "undefined") localStorage.setItem(TICKET_KEY, tid);
+      }
+
+      // Save user message to DB
+      await persistFn({ data: { ticketId: tid, content: msg, senderRole: "user" } });
+
+      // Get bot reply
+      const res = await send({ data: { message: msg } });
+
+      // Save bot reply to DB
+      await persistFn({ data: { ticketId: tid, content: res.reply, senderRole: "bot" } });
+
+      setLastSeen(new Date().toISOString());
+      return res;
+    },
     onSuccess: (res) => {
       setMessages((m) => [...m, { id: `b-${Date.now()}`, role: "bot", text: res.reply, at: res.at }]);
     },
   });
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, mutation.isPending]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,14 +127,30 @@ function SupportBot() {
           <div className="text-sm font-semibold">Ember · Virtual Assistant</div>
           <div className="text-[11px] text-emerald-600">Online · responds instantly</div>
         </div>
+        {ticketId && (
+          <div className="ml-auto flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] text-slate-500">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Live support active
+          </div>
+        )}
       </div>
 
       <div ref={scrollRef} className="h-80 overflow-y-auto px-5 py-4 space-y-3 bg-slate-50">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            {m.role === "admin" && (
+              <div className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center self-end rounded-full bg-red-100 text-[10px] font-bold text-red-700">A</div>
+            )}
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
-              m.role === "user" ? "bg-red-700 text-white rounded-br-sm" : "bg-white text-slate-800 border border-slate-200 rounded-bl-sm"
+              m.role === "user"
+                ? "bg-red-700 text-white rounded-br-sm"
+                : m.role === "admin"
+                  ? "bg-red-50 text-slate-800 border border-red-200 rounded-bl-sm"
+                  : "bg-white text-slate-800 border border-slate-200 rounded-bl-sm"
             }`}>
+              {m.role === "admin" && (
+                <div className="mb-1 text-[10px] font-semibold text-red-700">FinextHub Agent</div>
+              )}
               {m.text.split(SUPPORT_EMAIL).map((part, i, arr) => (
                 <span key={i}>
                   {part}

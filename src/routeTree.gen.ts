@@ -23,6 +23,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as LoansIdRouteImport } from './routes/loans_.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminTransactionsRouteImport } from './routes/admin/transactions'
+import { Route as AdminSupportRouteImport } from './routes/admin/support'
 import { Route as AdminLoansRouteImport } from './routes/admin/loans'
 import { Route as AdminUsersUserIdRouteImport } from './routes/admin/users.$userId'
 
@@ -96,6 +97,11 @@ const AdminTransactionsRoute = AdminTransactionsRouteImport.update({
   path: '/transactions',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminSupportRoute = AdminSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminLoansRoute = AdminLoansRouteImport.update({
   id: '/loans',
   path: '/loans',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
   '/admin/loans': typeof AdminLoansRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/transactions': typeof AdminTransactionsRoute
   '/admin/users': typeof AdminUsersRouteWithChildren
   '/loans/$id': typeof LoansIdRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
   '/admin/loans': typeof AdminLoansRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/transactions': typeof AdminTransactionsRoute
   '/admin/users': typeof AdminUsersRouteWithChildren
   '/loans/$id': typeof LoansIdRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/verify': typeof VerifyRoute
   '/admin/loans': typeof AdminLoansRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/transactions': typeof AdminTransactionsRoute
   '/admin/users': typeof AdminUsersRouteWithChildren
   '/loans_/$id': typeof LoansIdRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/verify'
     | '/admin/loans'
+    | '/admin/support'
     | '/admin/transactions'
     | '/admin/users'
     | '/loans/$id'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/verify'
     | '/admin/loans'
+    | '/admin/support'
     | '/admin/transactions'
     | '/admin/users'
     | '/loans/$id'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/verify'
     | '/admin/loans'
+    | '/admin/support'
     | '/admin/transactions'
     | '/admin/users'
     | '/loans_/$id'
@@ -331,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTransactionsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/support': {
+      id: '/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminSupportRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/loans': {
       id: '/admin/loans'
       path: '/loans'
@@ -362,6 +381,7 @@ const AdminUsersRouteWithChildren = AdminUsersRoute._addFileChildren(
 
 interface AdminRouteRouteChildren {
   AdminLoansRoute: typeof AdminLoansRoute
+  AdminSupportRoute: typeof AdminSupportRoute
   AdminTransactionsRoute: typeof AdminTransactionsRoute
   AdminUsersRoute: typeof AdminUsersRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
@@ -369,6 +389,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminLoansRoute: AdminLoansRoute,
+  AdminSupportRoute: AdminSupportRoute,
   AdminTransactionsRoute: AdminTransactionsRoute,
   AdminUsersRoute: AdminUsersRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
