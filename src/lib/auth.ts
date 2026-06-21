@@ -55,6 +55,16 @@ export function useAuthSession() {
   return useSyncExternalStore(authStore.subscribe, authStore.getSnapshot, authStore.getServerSnapshot);
 }
 
+// Centralized useAuth hook
+export function useAuth() {
+  const user = useSyncExternalStore(authStore.subscribe, () => authStore.current(), () => null);
+  return {
+    user,
+    isLoggedIn: !!user,
+    signOut: authStore.signOut,
+  };
+}
+
 export const SECURITY_QUESTIONS = [
   "What city were you born in?",
   "What is your mother's maiden name?",

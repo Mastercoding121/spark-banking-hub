@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -85,12 +85,29 @@ type ModalType = "name" | "password" | "pin" | "biometrics" | "notifications" | 
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 function ProfilePage() {
+  const navigate = useNavigate();
   const holder = useHolder();
   const currentUser = authStore.current();
   const { pin, biometrics } = useSecurity();
 
   const [openModal, setOpenModal] = useState<ModalType>(null);
   const [globalMsg, setGlobalMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [release, setRelease] = useState<{ latest: string; downloadUrl: string; releaseDate: string } | null>(null);
+
+  useEffect(() => {
+    const fetchRelease = async () => {
+      try {
+        const res = await fetch("/releases.json");
+        if (res.ok) {
+          const data = await res.json();
+          setRelease(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch releases", e);
+      }
+    };
+    fetchRelease();
+  }, []);
 
   const close = () => setOpenModal(null);
   const flash = (type: "ok" | "err", text: string) => {
@@ -222,15 +239,19 @@ function ProfilePage() {
           <div className="border-b border-slate-100 px-4 py-3">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">About</h2>
           </div>
-          <div className="divide-y divide-slate-100 px-4">
-            {[
-              ["App Version", "2.6.0 (Latest)"],
-            ].map(([k, v]) => (
-              <div key={k} className="flex items-center justify-between py-3">
-                <span className="text-sm text-slate-600">{k}</span>
-                <span className="text-sm font-medium text-slate-900">{v}</span>
+          <div className="divide-y divide-slate-100 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600">App Version</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-900">{release?.latest || "2.6.0"}</span>
+                <button
+                  onClick={() => navigate("/downloads")}
+                  className="rounded-lg bg-gradient-to-r from-amber-400 to-amber-600 px-3 py-1.5 text-xs font-semibold text-red-950 shadow-sm hover:from-amber-300 hover:to-amber-500"
+                >
+                  Check for Updates
+                </button>
               </div>
-            ))}
+            </div>
           </div>
         </section>
 

@@ -6,6 +6,7 @@ import { holderStore } from "@/lib/store";
 import { signUp } from "@/lib/user.functions";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ClientOnly } from "@/components/ClientOnly";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -98,8 +99,8 @@ function SignupPage() {
                 <input type="checkbox" checked={form.agree} onChange={(e) => set("agree", e.target.checked)} className="mt-0.5" />
                 I agree to the FinextHub Bank Terms, Privacy Notice, and electronic disclosures.
               </label>
-              <button disabled={busy} type="submit" className="mt-2 w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg hover:from-amber-300 hover:to-amber-500 disabled:opacity-60 sm:col-span-2">
-                {busy ? "Opening your account…" : "Open my account"}
+              <button disabled={busy} type="submit" className="mt-2 w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg hover:from-amber-300 hover:to-amber-500 disabled:opacity-60 sm:col-span-2 flex items-center justify-center gap-2">
+                {busy ? <><LoadingSpinner size="sm" /> Opening your account…</> : "Open my account"}
               </button>
               <p className="text-center text-xs text-white/70 sm:col-span-2">
                 Already a member? <Link to="/" className="font-semibold text-amber-300 hover:underline">Sign in</Link>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { lookupForReset, resetPassword } from "@/lib/user.functions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -80,8 +81,8 @@ function ForgotPage() {
                 <span className="mb-1 block text-xs font-medium text-white/80">Email on file</span>
                 <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="you@example.com" />
               </label>
-              <button disabled={busy} className="w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg disabled:opacity-60">
-                {busy ? "Looking up…" : "Continue"}
+              <button disabled={busy} className="w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg disabled:opacity-60 flex items-center justify-center gap-2">
+                {busy ? <><LoadingSpinner size="sm" /> Looking up…</> : "Continue"}
               </button>
             </form>
           )}
@@ -103,8 +104,8 @@ function ForgotPage() {
                 <span className="mb-1 block text-xs font-medium text-white/80">Confirm new password</span>
                 <input required type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} />
               </label>
-              <button disabled={busy} className="w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg disabled:opacity-60">
-                {busy ? "Updating…" : "Reset password"}
+              <button disabled={busy} className="w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg disabled:opacity-60 flex items-center justify-center gap-2">
+                {busy ? <><LoadingSpinner size="sm" /> Updating…</> : "Reset password"}
               </button>
             </form>
           )}

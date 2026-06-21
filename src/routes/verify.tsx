@@ -7,6 +7,7 @@ import { isEmailVerified, markEmailVerified } from "@/lib/otp";
 import { holderStore } from "@/lib/store";
 import { authStore } from "@/lib/auth";
 import { sendOtp, verifyOtp } from "@/lib/otp.functions";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export const Route = createFileRoute("/verify")({
   head: () => ({
@@ -289,10 +290,10 @@ function VerifyPage() {
                 <button
                   type="submit"
                   disabled={filled < OTP_LENGTH || isBusy || sendMut.isError}
-                  className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 py-3 text-sm font-bold text-red-950 shadow-lg shadow-amber-500/20 transition hover:from-amber-300 hover:to-amber-500 hover:shadow-amber-400/30 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 py-3 text-sm font-bold text-red-950 shadow-lg shadow-amber-500/20 transition hover:from-amber-300 hover:to-amber-500 hover:shadow-amber-400/30 disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center gap-2"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  {verifyMut.isPending ? "Verifying…" : "Verify & Continue →"}
+                  {verifyMut.isPending ? <><LoadingSpinner size="sm" /> Verifying…</> : "Verify & Continue →"}
                 </button>
               </form>
 
@@ -312,9 +313,9 @@ function VerifyPage() {
                       type="button"
                       onClick={handleResend}
                       disabled={sendMut.isPending}
-                      className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50"
+                      className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {sendMut.isPending ? "Sending…" : "Resend code"}
+                      {sendMut.isPending ? <><LoadingSpinner size="sm" /> Sending…</> : "Resend code"}
                     </button>
                   )}
                 </div>

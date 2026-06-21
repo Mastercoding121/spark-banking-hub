@@ -20,6 +20,7 @@ import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
 import { Route as GrantsRouteImport } from './routes/grants'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
@@ -87,6 +88,11 @@ const GrantsRoute = GrantsRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
+  '/downloads': typeof DownloadsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
+  '/downloads': typeof DownloadsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
+  '/downloads': typeof DownloadsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cookies'
     | '/dashboard'
+    | '/downloads'
     | '/forgot-password'
     | '/grants'
     | '/investments'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/'
     | '/cookies'
     | '/dashboard'
+    | '/downloads'
     | '/forgot-password'
     | '/grants'
     | '/investments'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cookies'
     | '/dashboard'
+    | '/downloads'
     | '/forgot-password'
     | '/grants'
     | '/investments'
@@ -318,6 +330,7 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   CookiesRoute: typeof CookiesRoute
   DashboardRoute: typeof DashboardRoute
+  DownloadsRoute: typeof DownloadsRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GrantsRoute: typeof GrantsRoute
   InvestmentsRoute: typeof InvestmentsRoute
@@ -409,6 +422,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -546,6 +566,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   CookiesRoute: CookiesRoute,
   DashboardRoute: DashboardRoute,
+  DownloadsRoute: DownloadsRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GrantsRoute: GrantsRoute,
   InvestmentsRoute: InvestmentsRoute,

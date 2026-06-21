@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { holderStore } from "@/lib/store";
-import { authStore } from "@/lib/auth";
+import { authStore, useAuth } from "@/lib/auth";
 import { signIn } from "@/lib/user.functions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,12 +19,19 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const signInFn = useServerFn(signIn);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate({ to: "/dashboard" });
+    }
+  }, [isLoggedIn, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,9 +121,9 @@ function Landing() {
               </label>
               <button
                 type="submit" disabled={busy}
-                className="mt-1 w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg hover:from-amber-300 hover:to-amber-500 disabled:opacity-60"
+                className="mt-1 w-full rounded-md bg-gradient-to-r from-amber-400 to-amber-600 py-2.5 text-sm font-bold text-red-950 shadow-lg hover:from-amber-300 hover:to-amber-500 disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {busy ? "Signing in…" : "Sign in securely"}
+                {busy ? <><LoadingSpinner size="sm" /> Signing in…</> : "Sign in securely"}
               </button>
             </form>
 
