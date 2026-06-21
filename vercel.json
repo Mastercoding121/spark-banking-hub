@@ -1,17 +1,9 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".vercel/output",
-  "framework": "vite",
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/node" }
+  ],
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "(.*)"
-        }
-      ]
-    }
+    { "source": "/(.*)", "destination": "/" }
   ]
 }
