@@ -63,7 +63,7 @@ async function createSession(userId: string): Promise<string> {
   return sessionId;
 }
 
-async function getSessionUser(sessionId: string): Promise<PublicUser | null> {
+export async function getSessionUser(sessionId: string): Promise<PublicUser | null> {
   if (!sessionId) return null;
   
   const db = getDb();
@@ -117,7 +117,7 @@ export const getSession = createServerFn({ method: "GET" }).handler(async (): Pr
 
 // ─── signUp ───────────────────────────────────────────────────────────────────
 export const signUp = createServerFn({ method: "POST" })
-  .inputValidator((input: {
+  .validator((input: {
     email: string;
     name: string;
     password: string;
@@ -231,7 +231,7 @@ export const signUp = createServerFn({ method: "POST" })
 
 // ─── signIn ───────────────────────────────────────────────────────────────────
 export const signIn = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string; password: string }) => {
+  .validator((input: { email: string; password: string }) => {
     const email = input.email?.trim().toLowerCase();
     if (!email) throw new Error("Email is required.");
     if (!input.password) throw new Error("Password is required.");
@@ -297,7 +297,7 @@ export const signOut = createServerFn({ method: "POST" }).handler(async () => {
 
 // ─── markVerified ─────────────────────────────────────────────────────────────
 export const markVerified = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string }) => ({ email: input.email.trim().toLowerCase() }))
+  .validator((input: { email: string }) => ({ email: input.email.trim().toLowerCase() }))
   .handler(async ({ data }) => {
     const db = getDb();
     
@@ -319,7 +319,7 @@ export const markVerified = createServerFn({ method: "POST" })
 
 // ─── lookupForReset ───────────────────────────────────────────────────────────
 export const lookupForReset = createServerFn({ method: "GET" })
-  .inputValidator((input: { email: string }) => ({ email: input.email.trim().toLowerCase() }))
+  .validator((input: { email: string }) => ({ email: input.email.trim().toLowerCase() }))
   .handler(async ({ data }) => {
     const db = getDb();
     
@@ -346,7 +346,7 @@ export const lookupForReset = createServerFn({ method: "GET" })
 
 // ─── resetPassword ────────────────────────────────────────────────────────────
 export const resetPassword = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string; answer: string; newPassword: string }) => ({
+  .validator((input: { email: string; answer: string; newPassword: string }) => ({
     email: input.email.trim().toLowerCase(),
     answer: input.answer.trim().toLowerCase(),
     newPassword: input.newPassword,
@@ -382,7 +382,7 @@ export const resetPassword = createServerFn({ method: "POST" })
 
 // ─── updateProfile ────────────────────────────────────────────────────────────
 export const updateUserProfile = createServerFn({ method: "POST" })
-  .inputValidator((input: { name?: string; currentPassword?: string; newPassword?: string }) => input)
+  .validator((input: { name?: string; currentPassword?: string; newPassword?: string }) => input)
   .handler(async ({ data }): Promise<PublicUser> => {
     const sid = getCookie(SESSION_COOKIE);
     const sessionUser = sid ? await getSessionUser(sid) : null;

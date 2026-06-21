@@ -27,7 +27,7 @@ async function getSessionUserId(): Promise<{ userId: string; name: string; email
 
 // ─── getOrCreateTicket ────────────────────────────────────────────────────────
 export const getOrCreateTicket = createServerFn({ method: "POST" })
-  .inputValidator((input: { ticketId?: string; name?: string; email?: string; topic?: string }) => input)
+  .validator((input: { ticketId?: string; name?: string; email?: string; topic?: string }) => input)
   .handler(async ({ data }) => {
     // Verify existing ticket
     if (data.ticketId) {
@@ -56,7 +56,7 @@ export const getOrCreateTicket = createServerFn({ method: "POST" })
 
 // ─── sendSupportMessage ───────────────────────────────────────────────────────
 export const sendSupportMessage = createServerFn({ method: "POST" })
-  .inputValidator((input: { ticketId: string; content: string; senderRole: "user" | "bot" }) => {
+  .validator((input: { ticketId: string; content: string; senderRole: "user" | "bot" }) => {
     if (!input.ticketId?.trim()) throw new Error("Ticket ID required");
     if (!input.content?.trim()) throw new Error("Content required");
     if (!["user", "bot"].includes(input.senderRole)) throw new Error("Invalid sender role");
@@ -78,7 +78,7 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
 // ─── getTicketMessages ────────────────────────────────────────────────────────
 // ─── submitSupportMessage ───────────────────────────────────────────────────
 export const submitSupportMessage = createServerFn({ method: "POST" })
-  .inputValidator((input: { name: string; email: string; topic: string; message: string }) => {
+  .validator((input: { name: string; email: string; topic: string; message: string }) => {
     if (!input.name?.trim()) throw new Error("Name required");
     if (!input.email?.trim()) throw new Error("Email required");
     if (!input.message?.trim()) throw new Error("Message required");
@@ -100,11 +100,11 @@ export const submitSupportMessage = createServerFn({ method: "POST" })
       content: data.message,
       createdAt: serverTimestamp(),
     });
-    return { ok: true, message: `Ticket ${ticketDocRef.id} opened successfully" };
+    return { ok: true, message: `Ticket ${ticketDocRef.id} opened successfully` };
   });
 
 export const getTicketMessages = createServerFn({ method: "GET" })
-  .inputValidator((input: { ticketId: string; since?: string }) => {
+  .validator((input: { ticketId: string; since?: string }) => {
     if (!input.ticketId?.trim()) throw new Error("Ticket ID required");
     return input;
   })

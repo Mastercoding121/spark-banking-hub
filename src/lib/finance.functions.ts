@@ -59,7 +59,7 @@ const NAMES: Record<string, string> = {
 };
 
 export const getStockQuotes = createServerFn({ method: "GET" })
-  .inputValidator((input: { symbols: string[] }) => ({
+  .validator((input: { symbols: string[] }) => ({
     symbols: (input.symbols || []).slice(0, 20).map((s) => String(s).toUpperCase()),
   }))
   .handler(async ({ data }): Promise<{ quotes: StockQuote[]; updatedAt: string }> => {
@@ -129,7 +129,7 @@ export const getPortfolio = createServerFn({ method: "GET" }).handler(async (): 
 // ─── Submit investment order (DB-backed, balance-checked) ──────────────────────
 
 export const submitInvestmentOrder = createServerFn({ method: "POST" })
-  .inputValidator((input: { symbol: string; shares: number; side: "buy" | "sell"; pricePerShare: number }) => {
+  .validator((input: { symbol: string; shares: number; side: "buy" | "sell"; pricePerShare: number }) => {
     if (!input.symbol) throw new Error("Symbol required");
     if (!input.shares || input.shares <= 0) throw new Error("Shares must be > 0");
     if (input.side !== "buy" && input.side !== "sell") throw new Error("Invalid side");
@@ -295,7 +295,7 @@ export type LoanApplication = {
 };
 
 export const submitLoanApplication = createServerFn({ method: "POST" })
-  .inputValidator((input: { productId: string; amount: number; termMonths: number; fullName: string; email: string }) => {
+  .validator((input: { productId: string; amount: number; termMonths: number; fullName: string; email: string }) => {
     if (!input.productId) throw new Error("Product required");
     if (!input.amount || input.amount < 500) throw new Error("Amount must be at least $500");
     if (!input.termMonths || input.termMonths < 6) throw new Error("Invalid term");
@@ -329,7 +329,7 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
   });
 
 export const uploadLoanDocument = createServerFn({ method: "POST" })
-  .inputValidator((input: { referenceId: string; name: string; sizeBytes: number; contentType: string }) => {
+  .validator((input: { referenceId: string; name: string; sizeBytes: number; contentType: string }) => {
     if (!input.referenceId?.trim()) throw new Error("Reference required");
     if (!input.name?.trim()) throw new Error("File name required");
     if (!input.sizeBytes || input.sizeBytes <= 0) throw new Error("Invalid file size");
@@ -367,7 +367,7 @@ export const uploadLoanDocument = createServerFn({ method: "POST" })
   });
 
 export const addUnderwritingNote = createServerFn({ method: "POST" })
-  .inputValidator((input: { referenceId: string; text: string }) => {
+  .validator((input: { referenceId: string; text: string }) => {
     if (!input.referenceId?.trim()) throw new Error("Reference required");
     if (!input.text?.trim() || input.text.length < 2) throw new Error("Note too short");
     if (input.text.length > 1000) throw new Error("Note too long");
@@ -400,7 +400,7 @@ export const addUnderwritingNote = createServerFn({ method: "POST" })
   });
 
 export const getLoanStatus = createServerFn({ method: "GET" })
-  .inputValidator((input: { referenceId: string }) => {
+  .validator((input: { referenceId: string }) => {
     if (!input.referenceId?.trim()) throw new Error("Reference required");
     return input;
   })
@@ -463,7 +463,7 @@ function botAnswer(text: string): string {
 }
 
 export const chatWithBot = createServerFn({ method: "POST" })
-  .inputValidator((input: { message: string }) => {
+  .validator((input: { message: string }) => {
     if (!input.message?.trim()) throw new Error("Message required");
     if (input.message.length > 1000) throw new Error("Message too long");
     return input;
@@ -475,7 +475,7 @@ export const chatWithBot = createServerFn({ method: "POST" })
 // ─── External transfer stubs ─────────────────────────────────────────────────
 
 export const sendChimeTransfer = createServerFn({ method: "POST" })
-  .inputValidator((input: { cashtag: string; amount: number; memo?: string }) => {
+  .validator((input: { cashtag: string; amount: number; memo?: string }) => {
     if (!input.cashtag?.trim()) throw new Error("$Cashtag required");
     if (!/^\$?[A-Za-z0-9_]{3,20}$/.test(input.cashtag.trim())) throw new Error("Invalid $Cashtag format");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be > 0");
@@ -489,7 +489,7 @@ export const sendChimeTransfer = createServerFn({ method: "POST" })
   });
 
 export const initiateApplePay = createServerFn({ method: "POST" })
-  .inputValidator((input: { amount: number; merchant?: string; deviceId?: string }) => {
+  .validator((input: { amount: number; merchant?: string; deviceId?: string }) => {
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be > 0");
     if (input.amount > 25000) throw new Error("Apple Pay limit is $25,000");
     return input;

@@ -135,7 +135,7 @@ export type AdminUserDetail = {
 
 // ─── getAdminUser ─────────────────────────────────────────────────────────────
 export const getAdminUser = createServerFn({ method: "GET" })
-  .inputValidator((input: { userId: string }) => input)
+  .validator((input: { userId: string }) => input)
   .handler(async ({ data }): Promise<AdminUserDetail> => {
     await requireAdmin();
 
@@ -185,7 +185,7 @@ export const getAdminUser = createServerFn({ method: "GET" })
 
 // ─── updateUser ───────────────────────────────────────────────────────────────
 export const updateUser = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; name?: string; email?: string; isAdmin?: boolean; verified?: boolean; newPassword?: string }) => input)
+  .validator((input: { userId: string; name?: string; email?: string; isAdmin?: boolean; verified?: boolean; newPassword?: string }) => input)
   .handler(async ({ data }) => {
     const adminId = await requireAdmin();
     if (data.userId === adminId && data.isAdmin === false) throw new Error("Cannot remove your own admin status.");
@@ -208,7 +208,7 @@ export const updateUser = createServerFn({ method: "POST" })
 
 // ─── deleteUser ───────────────────────────────────────────────────────────────
 export const deleteUser = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string }) => input)
+  .validator((input: { userId: string }) => input)
   .handler(async ({ data }) => {
     const adminId = await requireAdmin();
     if (data.userId === adminId) throw new Error("Cannot delete your own account.");
@@ -243,7 +243,7 @@ export const deleteUser = createServerFn({ method: "POST" })
 
 // ─── adminAdjustBalance ───────────────────────────────────────────────────────
 export const adminAdjustBalance = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; accountType: "checking" | "savings"; amount: number; note: string }) => {
+  .validator((input: { userId: string; accountType: "checking" | "savings"; amount: number; note: string }) => {
     if (typeof input.amount !== "number" || isNaN(input.amount) || input.amount === 0)
       throw new Error("Amount must be a non-zero number.");
     if (!input.note?.trim()) throw new Error("Admin note is required.");
@@ -278,7 +278,7 @@ export const adminAdjustBalance = createServerFn({ method: "POST" })
 
 // ─── adminAddTransaction ─────────────────────────────────────────────────────
 export const adminAddTransaction = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; accountType: "checking" | "savings"; description: string; category: string; amount: number }) => {
+  .validator((input: { userId: string; accountType: "checking" | "savings"; description: string; category: string; amount: number }) => {
     if (!input.description?.trim()) throw new Error("Description required.");
     if (typeof input.amount !== "number" || isNaN(input.amount) || input.amount === 0)
       throw new Error("Valid non-zero amount required.");
@@ -313,7 +313,7 @@ export const adminAddTransaction = createServerFn({ method: "POST" })
 
 // ─── adminDeleteTransaction ───────────────────────────────────────────────────
 export const adminDeleteTransaction = createServerFn({ method: "POST" })
-  .inputValidator((input: { transactionId: string; userId: string }) => input)
+  .validator((input: { transactionId: string; userId: string }) => input)
   .handler(async ({ data }) => {
     await requireAdmin();
 
@@ -454,7 +454,7 @@ export const adminListTickets = createServerFn({ method: "GET" }).handler(async 
 
 // ─── adminGetTicketMessages ───────────────────────────────────────────────────
 export const adminGetTicketMessages = createServerFn({ method: "GET" })
-  .inputValidator((input: { ticketId: string }) => {
+  .validator((input: { ticketId: string }) => {
     if (!input.ticketId) throw new Error("Ticket ID required");
     return input;
   })
@@ -481,7 +481,7 @@ export const adminGetTicketMessages = createServerFn({ method: "GET" })
 
 // ─── adminReplyTicket ─────────────────────────────────────────────────────────
 export const adminReplyTicket = createServerFn({ method: "POST" })
-  .inputValidator((input: { ticketId: string; content: string }) => {
+  .validator((input: { ticketId: string; content: string }) => {
     if (!input.ticketId) throw new Error("Ticket ID required");
     if (!input.content?.trim()) throw new Error("Message required");
     return { ...input, content: input.content.trim() };
@@ -505,7 +505,7 @@ export const adminReplyTicket = createServerFn({ method: "POST" })
 
 // ─── adminUpdateTicketStatus ──────────────────────────────────────────────────
 export const adminUpdateTicketStatus = createServerFn({ method: "POST" })
-  .inputValidator((input: { ticketId: string; status: "open" | "resolved" }) => {
+  .validator((input: { ticketId: string; status: "open" | "resolved" }) => {
     if (!["open", "resolved"].includes(input.status)) throw new Error("Invalid status");
     return input;
   })
@@ -596,7 +596,7 @@ export const getRecentActivity = createServerFn({ method: "GET" }).handler(async
 
 // ─── adminResetPassword ───────────────────────────────────────────────────────
 export const adminResetPassword = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; newPassword: string }) => {
+  .validator((input: { userId: string; newPassword: string }) => {
     if (!input.newPassword || input.newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
     return input;
   })
@@ -609,7 +609,7 @@ export const adminResetPassword = createServerFn({ method: "POST" })
 
 // ─── adminToggleVerified ──────────────────────────────────────────────────────
 export const adminToggleVerified = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; verified: boolean }) => input)
+  .validator((input: { userId: string; verified: boolean }) => input)
   .handler(async ({ data }) => {
     await requireAdmin();
 
@@ -623,7 +623,7 @@ export const adminToggleVerified = createServerFn({ method: "POST" })
 
 // ─── adminToggleAdmin ─────────────────────────────────────────────────────────
 export const adminToggleAdmin = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; isAdmin: boolean }) => input)
+  .validator((input: { userId: string; isAdmin: boolean }) => input)
   .handler(async ({ data }) => {
     const selfId = await requireAdmin();
     if (data.userId === selfId && !data.isAdmin) throw new Error("Cannot remove your own admin access.");
@@ -682,7 +682,7 @@ export const listLoans = createServerFn({ method: "GET" }).handler(async () => {
 
 // ─── updateLoanStatus ─────────────────────────────────────────────────────────
 export const updateLoanStatus = createServerFn({ method: "POST" })
-  .inputValidator((input: { loanId: string; status: string }) => {
+  .validator((input: { loanId: string; status: string }) => {
     const allowed = ["pending", "approved", "rejected", "disbursed"];
     if (!allowed.includes(input.status)) throw new Error("Invalid status.");
     return input;
@@ -700,7 +700,7 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
 
 // ─── adminUpdateUserCreatedAt ─────────────────────────────────────────────────
 export const adminUpdateUserCreatedAt = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; createdAt: string }) => {
+  .validator((input: { userId: string; createdAt: string }) => {
     if (!input.userId) throw new Error("User ID required");
     if (!input.createdAt) throw new Error("Date required");
     const d = new Date(input.createdAt);
@@ -735,7 +735,7 @@ export const adminGetFeatureFlags = createServerFn({ method: "GET" }).handler(as
 });
 
 export const adminSetFeatureFlag = createServerFn({ method: "POST" })
-  .inputValidator((input: { key: string; enabled: boolean; reason?: string; details?: string }) => {
+  .validator((input: { key: string; enabled: boolean; reason?: string; details?: string }) => {
     if (!input.key?.trim()) throw new Error("Feature key required");
     return input;
   })
@@ -790,7 +790,7 @@ export const adminListGrants = createServerFn({ method: "GET" }).handler(async (
 });
 
 export const adminCreateGrant = createServerFn({ method: "POST" })
-  .inputValidator((input: { title: string; description: string; amount: number; eligibilityText?: string; deadline?: string }) => {
+  .validator((input: { title: string; description: string; amount: number; eligibilityText?: string; deadline?: string }) => {
     if (!input.title?.trim()) throw new Error("Title required");
     if (!input.description?.trim()) throw new Error("Description required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be > 0");
@@ -814,7 +814,7 @@ export const adminCreateGrant = createServerFn({ method: "POST" })
   });
 
 export const adminUpdateGrant = createServerFn({ method: "POST" })
-  .inputValidator((input: {
+  .validator((input: {
     grantId: string;
     title: string;
     description: string;
@@ -845,7 +845,7 @@ export const adminUpdateGrant = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteGrant = createServerFn({ method: "POST" })
-  .inputValidator((input: { grantId: string }) => {
+  .validator((input: { grantId: string }) => {
     if (!input.grantId) throw new Error("Grant ID required");
     return input;
   })
@@ -856,7 +856,7 @@ export const adminDeleteGrant = createServerFn({ method: "POST" })
   });
 
 export const adminListGrantApplications = createServerFn({ method: "GET" })
-  .inputValidator((input: { grantId?: string }) => input)
+  .validator((input: { grantId?: string }) => input)
   .handler(async ({ data }) => {
     await requireAdmin();
 
@@ -906,7 +906,7 @@ export const adminListGrantApplications = createServerFn({ method: "GET" })
   });
 
 export const adminUpdateGrantApplication = createServerFn({ method: "POST" })
-  .inputValidator((input: { applicationId: string; status: "approved" | "rejected" }) => {
+  .validator((input: { applicationId: string; status: "approved" | "rejected" }) => {
     if (!["approved", "rejected"].includes(input.status)) throw new Error("Invalid status");
     return input;
   })

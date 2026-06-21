@@ -105,7 +105,7 @@ export const getTransactions = createServerFn({ method: "GET" }).handler(async (
 
 // ─── addTransaction ───────────────────────────────────────────────────────────
 export const addTransaction = createServerFn({ method: "POST" })
-  .inputValidator((input: {
+  .validator((input: {
     accountType: string;
     date: string;
     description: string;
@@ -161,7 +161,7 @@ export const addTransaction = createServerFn({ method: "POST" })
 
 // ─── deleteTransaction ────────────────────────────────────────────────────────
 export const deleteTransaction = createServerFn({ method: "POST" })
-  .inputValidator((input: { transactionId: string }) => {
+  .validator((input: { transactionId: string }) => {
     if (!input.transactionId) throw new Error("Transaction ID required.");
     return input;
   })
@@ -193,7 +193,7 @@ export const deleteTransaction = createServerFn({ method: "POST" })
 
 // ─── transferBetweenAccounts ──────────────────────────────────────────────────
 export const transferBetweenAccounts = createServerFn({ method: "POST" })
-  .inputValidator((input: { fromAccount: string; toAccount: string; amount: number; description?: string }) => {
+  .validator((input: { fromAccount: string; toAccount: string; amount: number; description?: string }) => {
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than 0.");
     if (input.fromAccount === input.toAccount) throw new Error("Cannot transfer to the same account.");
     return {
@@ -259,7 +259,7 @@ export const transferBetweenAccounts = createServerFn({ method: "POST" })
 
 // ─── recordExternalTransfer ───────────────────────────────────────────────────
 export const recordExternalTransfer = createServerFn({ method: "POST" })
-  .inputValidator((input: { amount: number; description: string; method: string }) => {
+  .validator((input: { amount: number; description: string; method: string }) => {
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be > 0.");
     if (!input.description?.trim()) throw new Error("Description required.");
     return {

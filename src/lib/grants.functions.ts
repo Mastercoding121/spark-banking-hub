@@ -76,7 +76,7 @@ export const getPublicGrants = createServerFn({ method: "GET" }).handler(async (
 
 // ─── applyForGrant ────────────────────────────────────────────────────────────
 export const applyForGrant = createServerFn({ method: "POST" })
-  .inputValidator((input: { grantId: string; purpose: string; amountRequested: number }) => {
+  .validator((input: { grantId: string; purpose: string; amountRequested: number }) => {
     if (!input.grantId) throw new Error("Grant ID required.");
     if (!input.purpose?.trim() || input.purpose.trim().length < 20)
       throw new Error("Please describe your purpose (at least 20 characters)");

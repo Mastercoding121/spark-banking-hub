@@ -22,7 +22,7 @@ function generateCode(): string {
 }
 
 export const sendOtp = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string; name?: string }) => {
+  .validator((input: { email: string; name?: string }) => {
     if (!input.email?.trim()) throw new Error("Email required");
     return { email: input.email.trim().toLowerCase(), name: input.name || "" };
   })
@@ -116,7 +116,7 @@ export const sendOtp = createServerFn({ method: "POST" })
   });
 
 export const verifyOtp = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string; code: string }) => {
+  .validator((input: { email: string; code: string }) => {
     if (!input.email?.trim()) throw new Error("Email required");
     if (!input.code?.trim()) throw new Error("Code required");
     return { email: input.email.trim().toLowerCase(), code: input.code.trim() };
