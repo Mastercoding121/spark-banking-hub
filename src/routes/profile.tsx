@@ -6,7 +6,7 @@ import { BankShell } from "@/components/BankShell";
 import { holderStore, useHolder } from "@/lib/store";
 import { authStore } from "@/lib/auth";
 import { securityStore, useSecurity, requestBiometric } from "@/lib/security";
-import { updateProfile } from "@/lib/user.functions";
+import { updateUserProfile } from "@/lib/user.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile & Settings — FinextHub Bank" }] }),
@@ -287,7 +287,7 @@ function NameModal({ holder, onClose, onSuccess, onError }: {
   holder: string; onClose: () => void; onSuccess: (m: string) => void; onError: (m: string) => void;
 }) {
   const [name, setName] = useState(holder);
-  const updateFn = useServerFn(updateProfile);
+  const updateFn = useServerFn(updateUserProfile);
   const mut = useMutation({
     mutationFn: () => updateFn({ data: { name } }),
     onSuccess: () => {
@@ -339,7 +339,7 @@ function PasswordModal({ onClose, onSuccess, onError }: {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
 
-  const updateFn = useServerFn(updateProfile);
+  const updateFn = useServerFn(updateUserProfile);
   const mut = useMutation({
     mutationFn: () => updateFn({ data: { currentPassword: current, newPassword: next } }),
     onSuccess: () => { onSuccess("Password changed successfully."); onClose(); },

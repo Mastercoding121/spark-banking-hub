@@ -3,8 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { BankShell } from "@/components/BankShell";
-import { chatWithBot, submitSupportMessage } from "@/lib/finance.functions";
-import { getOrCreateTicket, sendSupportMessage as persistMessage, getTicketMessages } from "@/lib/support.functions";
+import { chatWithBot } from "@/lib/finance.functions";
+import { getOrCreateTicket, sendSupportMessage as persistMessage, getTicketMessages, submitSupportMessage } from "@/lib/support.functions";
 
 export const Route = createFileRoute("/support")({
   head: () => ({

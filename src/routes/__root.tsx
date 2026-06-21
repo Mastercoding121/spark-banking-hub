@@ -7,9 +7,10 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
+import { ClientOnly } from "@/components/ClientOnly";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -78,19 +79,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "FinextHub Bank of USA" },
+      { name: "description", content: "Secure online banking with FinextHub Bank of USA" },
+      { name: "author", content: "FinextHub" },
+      { property: "og:title", content: "FinextHub Bank of USA" },
+      { property: "og:description", content: "Secure online banking with FinextHub Bank of USA" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:site", content: "@FinextHub" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "icon",
+        type: "image/png",
+        href: "/favicon.png",
+      },
+      {
+        rel: "shortcut icon",
+        type: "image/png",
+        href: "/favicon.png",
       },
     ],
   }),
@@ -102,11 +113,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
@@ -114,15 +125,7 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-// Sonner v2 uses matchMedia() on the client to detect system theme and adds a
-// data-theme attribute that wasn't present in the server HTML — causing a
-// portal attribute mismatch during React hydration. Rendering it client-only
-// (null on server, mounted after hydration) eliminates the comparison entirely.
-function ClientOnly({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted ? <>{children}</> : null;
-}
+
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();

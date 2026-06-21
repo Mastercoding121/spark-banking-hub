@@ -42,7 +42,7 @@ export function BrandLogo({ height = "h-9", className = "" }: BrandLogoProps) {
   return (
     <img
       ref={imgRef}
-      src="/logo.png"
+      src="/Logo.png"
       alt="FinextHub Bank"
       className={`${height} w-auto max-w-[160px] object-contain ${className}`}
       onError={() => {

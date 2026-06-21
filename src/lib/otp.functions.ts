@@ -1,6 +1,19 @@
+
 import { createServerFn } from "@tanstack/react-start";
 import { Resend } from "resend";
-import { query, queryOne } from "./db";
+import { db } from "./firebase";
+import {
+  collection,
+  doc,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  updateDoc,
+  query,
+  where,
+  getDocs,
+  serverTimestamp,
+} from "firebase/firestore";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 
@@ -11,18 +24,21 @@ function generateCode(): string {
 export const sendOtp = createServerFn({ method: "POST" })
   .inputValidator((input: { email: string; name?: string }) => {
     if (!input.email?.trim()) throw new Error("Email required");
-    return { email: input.email.trim().toLowerCase(), name: input.name ?? "" };
+    return { email: input.email.trim().toLowerCase(), name: input.name || "" };
   })
   .handler(async ({ data }) => {
     const code = generateCode();
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
-    // Upsert OTP code in DB
-    await query(
-      `INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, $3)
-       ON CONFLICT (email) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at`,
-      [data.email, code, expiresAt]
-    );
+    // Upsert OTP code in Firestore
+    const otpDocRef = doc(db, "otpCodes", data.email);
+    await setDoc(otpDocRef, {
+      email: data.email,
+      code,
+      expiresAt,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("Email service not configured.");
@@ -106,18 +122,25 @@ export const verifyOtp = createServerFn({ method: "POST" })
     return { email: input.email.trim().toLowerCase(), code: input.code.trim() };
   })
   .handler(async ({ data }) => {
-    const row = await queryOne<{ code: string; expires_at: string }>(
-      "SELECT code, expires_at FROM otp_codes WHERE email = $1",
-      [data.email]
-    );
-    if (!row) throw new Error("No code found. Please request a new one.");
-    if (new Date(row.expires_at) < new Date()) {
-      await query("DELETE FROM otp_codes WHERE email = $1", [data.email]);
+    const otpDocRef = doc(db, "otpCodes", data.email);
+    const otpDoc = await getDoc(otpDocRef);
+    if (!otpDoc.exists()) throw new Error("No code found. Please request a new one.");
+    const otpData = otpDoc.data();
+    if (new Date(otpData.expiresAt.toDate ? otpData.expiresAt.toDate() : otpData.expiresAt) < new Date()) {
+      await deleteDoc(otpDocRef);
       throw new Error("Code expired. Please request a new one.");
     }
-    if (data.code !== row.code) throw new Error("Incorrect code. Please try again.");
-    await query("DELETE FROM otp_codes WHERE email = $1", [data.email]);
+    if (data.code !== otpData.code) throw new Error("Incorrect code. Please try again.");
+    await deleteDoc(otpDocRef);
     // Mark user as verified
-    await query("UPDATE users SET verified = TRUE, updated_at = NOW() WHERE email = $1", [data.email]);
+    const userQuery = query(collection(db, "users"), where("email", "==", data.email));
+    const userSnap = await getDocs(userQuery);
+    if (!userSnap.empty) {
+      await updateDoc(userSnap.docs[0].ref, {
+        verified: true,
+        updatedAt: serverTimestamp(),
+      });
+    }
     return { ok: true };
   });
+
