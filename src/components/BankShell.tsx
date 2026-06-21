@@ -1,8 +1,8 @@
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import type { ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { holderStore, useHolder } from "@/lib/store";
-import { authStore } from "@/lib/auth";
+import { authStore, type StoredUser } from "@/lib/auth";
 import { signOut } from "@/lib/user.functions";
 import { BrandLogo } from "@/components/BrandLogo";
 
@@ -92,8 +92,16 @@ export function BankShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const holder = useHolder();
-  const currentUser = authStore.current();
   const signOutFn = useServerFn(signOut);
+
+  // Read auth state client-side only — authStore reads localStorage which isn't
+  // available during SSR. Initialise to null (same as server) and update after mount
+  // so the first hydration render matches the server-rendered HTML exactly.
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
+  useEffect(() => {
+    setCurrentUser(authStore.current());
+    return authStore.subscribe(() => setCurrentUser(authStore.current()));
+  }, []);
 
   const handleLogout = async () => {
     try { await signOutFn({}); } catch {}

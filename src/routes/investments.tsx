@@ -200,7 +200,7 @@ function InvestmentsPage() {
             <h1 className="text-2xl font-bold">Investments</h1>
             <p className="text-sm text-slate-600">Live market data refreshes every 15 seconds.</p>
           </div>
-          <div className="text-right text-xs text-slate-500">
+          <div className="text-right text-xs text-slate-500" suppressHydrationWarning>
             {quotesQuery.isFetching ? "Refreshing…" : quotesQuery.data ? `Updated ${new Date(quotesQuery.data.updatedAt).toLocaleTimeString()}` : "Loading…"}
           </div>
         </div>

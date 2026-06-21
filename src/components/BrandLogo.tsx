@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface BrandLogoProps {
   height?: string;
@@ -7,6 +7,15 @@ interface BrandLogoProps {
 
 export function BrandLogo({ height = "h-9", className = "" }: BrandLogoProps) {
   const [failed, setFailed] = useState(false);
+  const mountedRef = useRef(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth === 0) {
+      setFailed(true);
+    }
+  }, []);
 
   if (failed) {
     return (
@@ -32,10 +41,13 @@ export function BrandLogo({ height = "h-9", className = "" }: BrandLogoProps) {
 
   return (
     <img
+      ref={imgRef}
       src="/logo.png"
       alt="FinextHub Bank"
       className={`${height} w-auto max-w-[160px] object-contain ${className}`}
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (mountedRef.current) setFailed(true);
+      }}
       suppressHydrationWarning
     />
   );

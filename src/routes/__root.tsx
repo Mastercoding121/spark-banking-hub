@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
@@ -114,6 +114,16 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+// Sonner v2 uses matchMedia() on the client to detect system theme and adds a
+// data-theme attribute that wasn't present in the server HTML — causing a
+// portal attribute mismatch during React hydration. Rendering it client-only
+// (null on server, mounted after hydration) eliminates the comparison entirely.
+function ClientOnly({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? <>{children}</> : null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -121,7 +131,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-      <Toaster />
+      <ClientOnly>
+        <Toaster />
+      </ClientOnly>
     </QueryClientProvider>
   );
 }
