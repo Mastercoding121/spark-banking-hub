@@ -18,29 +18,32 @@ let auth: any = null;
 let db: any = null;
 let analytics: any = null;
 
-// Only initialize Firebase on client
-const isClient = typeof window !== "undefined";
-
-if (isClient) {
-  try {
-    if (getApps().length === 0) {
-      app = initializeApp(firebaseConfig);
+try {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    
+    // Only initialize auth and analytics on client
+    if (typeof window !== "undefined") {
       auth = getAuth(app);
-      db = getFirestore(app);
-
+      
       isSupported().then((supported) => {
         if (supported && app) {
           analytics = getAnalytics(app);
         }
       }).catch(() => { /* ignore analytics errors */ });
-    } else {
-      app = getApps()[0];
-      auth = getAuth(app);
-      db = getFirestore(app);
     }
-  } catch (error) {
-    console.warn("Firebase initialization failed (demo mode)", error);
+  } else {
+    app = getApps()[0];
+    db = getFirestore(app);
+    
+    // Only initialize auth and analytics on client
+    if (typeof window !== "undefined") {
+      auth = getAuth(app);
+    }
   }
+} catch (error) {
+  console.warn("Firebase initialization failed (demo mode)", error);
 }
 
 export { app, auth, db, analytics };

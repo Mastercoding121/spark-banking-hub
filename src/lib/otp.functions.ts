@@ -101,7 +101,7 @@ export const sendOtp = createServerFn({ method: "POST" })
 </html>`;
 
     const { error } = await resend.emails.send({
-      from: "FinextHub Bank <noreply@finexthub.com>",
+      from: "FinextHub <onboarding@finexthub.com>",
       to: [data.email],
       subject: `${code} is your FinextHub verification code`,
       html,
