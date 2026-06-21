@@ -1,1 +1,0 @@
-import{c as e}from"./createServerFn-BbIKNofF.js";import{c as a}from"./index-rvvJwinS.js";const c=e({method:"GET"}).handler(a("9619200c00f8f81ceb01b7410943ded19f8954e1e52aa1f25df82d89adb0020d"));export{c as g};
