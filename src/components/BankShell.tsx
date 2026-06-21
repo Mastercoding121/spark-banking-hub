@@ -5,6 +5,18 @@ import { holderStore, useHolder } from "@/lib/store";
 import { authStore, type StoredUser } from "@/lib/auth";
 import { signOut } from "@/lib/user.functions";
 import { BrandLogo } from "@/components/BrandLogo";
+import {
+  Home,
+  Wallet,
+  Landmark,
+  TrendingUp,
+  MoreHorizontal,
+  User,
+  MessageSquare,
+  LogOut,
+  Settings,
+  Award,
+} from "lucide-react";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Dashboard" },
@@ -15,77 +27,18 @@ const NAV_LINKS = [
   { to: "/support", label: "Support" },
 ];
 
-const BOTTOM_NAV = [
-  {
-    to: "/dashboard",
-    label: "Home",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
-        <path d="M9 21V12h6v9" />
-      </svg>
-    ),
-  },
-  {
-    to: "/wallet",
-    label: "Wallet",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-5z" />
-        <path d="M16 12h.01" />
-      </svg>
-    ),
-  },
-  {
-    to: "/loans",
-    label: "Loans",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="9" width="18" height="12" rx="1" />
-        <path d="M3 9l9-6 9 6" />
-        <line x1="9" y1="21" x2="9" y2="9" />
-        <line x1="15" y1="21" x2="15" y2="9" />
-      </svg>
-    ),
-  },
-  {
-    to: "/investments",
-    label: "Invest",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-        <polyline points="16 7 22 7 22 13" />
-      </svg>
-    ),
-  },
-  {
-    to: "/grants",
-    label: "Grants",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="6" /><path d="M8 14l-2 6h12l-2-6" />
-      </svg>
-    ),
-  },
-  {
-    to: "/support",
-    label: "Support",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-      </svg>
-    ),
-  },
-  {
-    to: "/profile",
-    label: "Profile",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-      </svg>
-    ),
-  },
+const BOTTOM_NAV_CORE = [
+  { to: "/dashboard", label: "Home", icon: <Home className="h-5 w-5" /> },
+  { to: "/wallet", label: "Wallet", icon: <Wallet className="h-5 w-5" /> },
+  { to: "/loans", label: "Loans", icon: <Landmark className="h-5 w-5" /> },
+  { to: "/investments", label: "Activity", icon: <TrendingUp className="h-5 w-5" /> },
+];
+
+const MORE_MENU_ITEMS = [
+  { to: "/grants", label: "Grants", icon: <Award className="h-4 w-4" /> },
+  { to: "/support", label: "Support", icon: <MessageSquare className="h-4 w-4" /> },
+  { to: "/profile", label: "Profile", icon: <User className="h-4 w-4" /> },
+  { to: "/profile", label: "Settings", icon: <Settings className="h-4 w-4" /> },
 ];
 
 export function BankShell({ children }: { children: ReactNode }) {
@@ -93,6 +46,7 @@ export function BankShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const holder = useHolder();
   const signOutFn = useServerFn(signOut);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // Read auth state client-side only — authStore reads localStorage which isn't
   // available during SSR. Initialise to null (same as server) and update after mount
@@ -107,6 +61,7 @@ export function BankShell({ children }: { children: ReactNode }) {
     try { await signOutFn({}); } catch {}
     authStore.signOut();
     holderStore.set("");
+    setShowMoreMenu(false);
     router.navigate({ to: "/" });
   };
 
@@ -115,11 +70,9 @@ export function BankShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-
       {/* ── Sticky Header ──────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-red-700 via-red-800 to-red-900 text-white shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
-
           {/* Brand */}
           <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5">
             <BrandLogo height="h-9" className="text-white/60" />
@@ -135,7 +88,7 @@ export function BankShell({ children }: { children: ReactNode }) {
               <Link
                 key={to}
                 to={to}
-                className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+                className={`rounded-md px-3 py-1.5 text-[13px] font-bold transition ${
                   isActive(to)
                     ? "bg-white/20 text-white"
                     : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -147,7 +100,7 @@ export function BankShell({ children }: { children: ReactNode }) {
             {currentUser?.isAdmin && (
               <Link
                 to="/admin"
-                className="ml-1 rounded-md bg-amber-400/20 px-3 py-1.5 text-[13px] font-medium text-amber-300 hover:bg-amber-400/30"
+                className="ml-1 rounded-md bg-amber-400/20 px-3 py-1.5 text-[13px] font-bold text-amber-300 hover:bg-amber-400/30"
               >
                 Admin
               </Link>
@@ -158,7 +111,7 @@ export function BankShell({ children }: { children: ReactNode }) {
           <div className="flex shrink-0 items-center gap-2">
             <div className="hidden text-right leading-tight lg:block">
               <div className="text-[10px] uppercase tracking-widest opacity-60">Account Holder</div>
-              <div className="max-w-[140px] truncate text-sm font-semibold">{holder || "Guest"}</div>
+              <div className="max-w-[140px] truncate text-sm font-bold">{holder || "Guest"}</div>
             </div>
             <Link
               to="/profile"
@@ -173,7 +126,7 @@ export function BankShell({ children }: { children: ReactNode }) {
             </Link>
             <button
               onClick={handleLogout}
-              className="hidden rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-white/20 sm:block"
+              className="hidden rounded-md bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 transition hover:bg-white/20 sm:block"
             >
               Sign out
             </button>
@@ -208,7 +161,7 @@ export function BankShell({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-xl text-red-700">💬</div>
                 <div>
-                  <div className="text-sm font-semibold">24/7 Customer Support</div>
+                  <div className="text-sm font-bold">24/7 Customer Support</div>
                   <div className="text-xs text-slate-500">Chat with Ember or open a ticket — any time, day or night.</div>
                 </div>
               </div>
@@ -228,10 +181,18 @@ export function BankShell({ children }: { children: ReactNode }) {
         </footer>
       </div>
 
+      {/* ── More Menu Overlay ───────────────────────────────────── */}
+      {showMoreMenu && (
+        <div
+          className="fixed inset-0 z-50 bg-black/30"
+          onClick={() => setShowMoreMenu(false)}
+        />
+      )}
+
       {/* ── Mobile Bottom Navigation ──────────────────────────── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden">
         <div className="flex items-stretch">
-          {BOTTOM_NAV.map(({ to, label, icon }) => {
+          {BOTTOM_NAV_CORE.map(({ to, label, icon }) => {
             const active = isActive(to);
             return (
               <Link
@@ -244,7 +205,7 @@ export function BankShell({ children }: { children: ReactNode }) {
                 <span className={`transition-transform ${active ? "scale-110" : ""}`}>
                   {icon}
                 </span>
-                <span className={`text-[10px] font-medium ${active ? "text-red-700" : ""}`}>
+                <span className={`text-[10px] font-bold ${active ? "text-red-700" : ""}`}>
                   {label}
                 </span>
                 {active && (
@@ -253,7 +214,47 @@ export function BankShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          {/* More Menu Button */}
+          <button
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
+              showMoreMenu ? "text-red-700" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <span className={`transition-transform ${showMoreMenu ? "scale-110" : ""}`}>
+              <MoreHorizontal className="h-5 w-5" />
+            </span>
+            <span className={`text-[10px] font-bold ${showMoreMenu ? "text-red-700" : ""}`}>
+              More
+            </span>
+          </button>
         </div>
+
+        {/* More Menu Dropdown */}
+        {showMoreMenu && (
+          <div className="absolute bottom-16 left-1/2 mb-2 w-[280px] -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+            {MORE_MENU_ITEMS.map(({ to, label, icon }) => (
+              <Link
+                key={to}
+                to={to}
+                onClick={() => setShowMoreMenu(false)}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 ${
+                  isActive(to) ? "text-red-700 bg-slate-100" : ""
+                }`}
+              >
+                {icon}
+                {label}
+              </Link>
+            ))}
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+        )}
       </nav>
     </div>
   );

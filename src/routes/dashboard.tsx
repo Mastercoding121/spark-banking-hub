@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { BankShell } from "@/components/BankShell";
 import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
 import { getFeatureFlags } from "@/lib/feature-flags.functions";
@@ -14,6 +14,17 @@ import { ACCOUNT_DETAILS, useHolder } from "@/lib/store";
 import { ReceiptModal, type ReceiptData } from "@/components/Receipt";
 import { SecurityPrompt } from "@/components/SecurityPrompt";
 import { AccountDetailsModal, type AccountKey } from "@/components/AccountDetails";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import {
+  Landmark,
+  TrendingUp,
+  ArrowLeftRight,
+  Send,
+  CreditCard,
+  Smartphone,
+} from "lucide-react";
+import { SiZelle, SiApple, SiChime } from "react-icons/si";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -31,6 +42,8 @@ function Dashboard() {
   const qc = useQueryClient();
   const holder = useHolder();
   const [openAccount, setOpenAccount] = useState<AccountKey | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
 
   const flagsFn = useServerFn(getFeatureFlags);
   const getTransactionsFn = useServerFn(getTransactions);
@@ -40,11 +53,29 @@ function Dashboard() {
   const chimeFn = useServerFn(sendChimeTransfer);
   const applePayFn = useServerFn(initiateApplePay);
 
-  const txQuery = useQuery({
-    queryKey: ["transactions"],
-    queryFn: () => getTransactionsFn({}),
-    staleTime: 30_000,
-  });
+  // Real-time transaction listener
+  useEffect(() => {
+    setIsLoadingTransactions(true);
+    const q = query(
+      collection(db, "transactions"),
+      orderBy("timestamp", "desc"),
+      limit(20)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTransactions(data);
+      setIsLoadingTransactions(false);
+    }, (error) => {
+      console.error("Error fetching transactions:", error);
+      setIsLoadingTransactions(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const accQuery = useQuery({
     queryKey: ["accounts"],
@@ -54,7 +85,6 @@ function Dashboard() {
 
   const flagsQuery = useQuery({ queryKey: ["feature-flags"], queryFn: () => flagsFn({}), staleTime: 30_000 });
 
-  const transactions = txQuery.data ?? [];
   const accounts = accQuery.data ?? [];
   const checking = accounts.find((a) => a.type === "checking")?.balance ?? 0;
   const savings = accounts.find((a) => a.type === "savings")?.balance ?? 0;
@@ -93,7 +123,6 @@ function Dashboard() {
   }, [transactions, searchQuery, category, txType, from, to]);
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["transactions"] });
     qc.invalidateQueries({ queryKey: ["accounts"] });
   };
 
@@ -174,7 +203,7 @@ function Dashboard() {
 
         {/* Accounts */}
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Account Summary</h2>
+          <h2 className="mb-3 text-lg font-bold">Account Summary</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <AccountCard
               name="FinextHub Checking"
@@ -194,26 +223,26 @@ function Dashboard() {
 
         {/* Quick services */}
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Quick Services</h2>
+          <h2 className="mb-3 text-lg font-bold">Quick Services</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <LinkTile to="/loans" label="Loans" sub="Apply & track" accent="from-blue-600 to-blue-800" icon="$" />
-            <LinkTile to="/investments" label="Investments" sub="Live market rates" accent="from-amber-500 to-orange-600" icon="↗" />
-            <ServiceTile label="Transfers" sub="Internal · ACH · Wire" accent="from-red-600 to-red-800" icon="⇄" active={method === "internal" || method === "ach"} onClick={() => setMethod("internal")} />
-            <ServiceTile label="Zelle" sub="Send in minutes" accent="from-violet-600 to-purple-700" icon="Z" active={method === "zelle"} onClick={() => setMethod("zelle")} />
-            <ServiceTile label="Apple Pay" sub="Tap to pay" accent="from-slate-800 to-black" icon="" active={method === "applepay"} onClick={() => setMethod("applepay")} />
-            <ServiceTile label="Chime" sub="Instant transfer" accent="from-emerald-500 to-emerald-700" icon="C" active={method === "chime"} onClick={() => setMethod("chime")} />
+            <LinkTile to="/loans" label="Loans" sub="Apply & track" accent="from-blue-600 to-blue-800" icon={<Landmark className="h-6 w-6" />} />
+            <LinkTile to="/investments" label="Investments" sub="Live market rates" accent="from-amber-500 to-orange-600" icon={<TrendingUp className="h-6 w-6" />} />
+            <ServiceTile label="Transfers" sub="Internal · ACH · Wire" accent="from-red-600 to-red-800" icon={<ArrowLeftRight className="h-6 w-6" />} active={method === "internal" || method === "ach"} onClick={() => setMethod("internal")} />
+            <ServiceTile label="Zelle" sub="Send in minutes" accent="from-violet-600 to-purple-700" icon={<SiZelle className="h-6 w-6" />} active={method === "zelle"} onClick={() => setMethod("zelle")} />
+            <ServiceTile label="Apple Pay" sub="Tap to pay" accent="from-slate-800 to-black" icon={<SiApple className="h-6 w-6" />} active={method === "applepay"} onClick={() => setMethod("applepay")} />
+            <ServiceTile label="Chime" sub="Instant transfer" accent="from-emerald-500 to-emerald-700" icon={<SiChime className="h-6 w-6" />} active={method === "chime"} onClick={() => setMethod("chime")} />
           </div>
         </section>
 
         {/* Transfer panel */}
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold">Transfer Funds</h2>
+          <h2 className="mb-4 text-lg font-bold">Transfer Funds</h2>
 
           {/* System flag notices */}
           {!transfersEnabled && (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-5 text-center">
               <div className="text-2xl mb-2">⚙️</div>
-              <p className="font-semibold text-amber-800 text-sm">Transfers Temporarily Unavailable</p>
+              <p className="font-bold text-amber-800 text-sm">Transfers Temporarily Unavailable</p>
               {flagsQuery.data?.transfers.reason && <p className="text-xs text-amber-700 mt-1">{flagsQuery.data.transfers.reason}</p>}
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">{flagsQuery.data?.transfers.details || "Transfer services are temporarily unavailable. Please check back later."}</p>
               <p className="text-[10px] text-slate-400 mt-3">— System</p>
@@ -221,21 +250,21 @@ function Dashboard() {
           )}
           {transfersEnabled && !depositsEnabled && (
             <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs">
-              <span className="font-semibold text-amber-800">Deposits: </span>
+              <span className="font-bold text-amber-800">Deposits: </span>
               <span className="text-amber-700">{flagsQuery.data?.deposits.reason || "Deposits"} temporarily unavailable. {flagsQuery.data?.deposits.details || ""}</span>
               <span className="ml-2 text-slate-400">— System</span>
             </div>
           )}
           {transfersEnabled && !withdrawalsEnabled && (
             <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs">
-              <span className="font-semibold text-amber-800">Withdrawals: </span>
+              <span className="font-bold text-amber-800">Withdrawals: </span>
               <span className="text-amber-700">{flagsQuery.data?.withdrawals.reason || "Withdrawals"} temporarily unavailable. {flagsQuery.data?.withdrawals.details || ""}</span>
               <span className="ml-2 text-slate-400">— System</span>
             </div>
           )}
 
           {transfersEnabled && <div>
-          <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium">
+          <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1 text-xs font-bold">
             {(["internal", "ach", "zelle", "applepay", "chime"] as TransferMethod[]).map((m) => (
               <button key={m} type="button" onClick={() => setMethod(m)} className={`flex-1 min-w-[64px] rounded-md py-1.5 capitalize transition ${method === m ? "bg-white text-red-700 shadow-sm" : "text-slate-600"}`}>
                 {labelFor(m)}
@@ -308,7 +337,7 @@ function Dashboard() {
             <div className="sm:col-span-2">
               <button
                 type="submit"
-                className="w-full rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-sm font-semibold text-white hover:from-red-800 hover:to-red-900 disabled:opacity-60"
+                className="w-full rounded-md bg-gradient-to-r from-red-700 to-red-800 py-2.5 text-sm font-bold text-white hover:from-red-800 hover:to-red-900 disabled:opacity-60"
               >
                 Send via {labelFor(method)}
               </button>
@@ -321,7 +350,7 @@ function Dashboard() {
         {/* Transaction history */}
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Transaction History</h2>
+            <h2 className="text-lg font-bold">Transaction History</h2>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">{filtered.length} of {transactions.length}</span>
               <button onClick={invalidate} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:border-red-300 hover:text-red-700">↺ Refresh</button>
@@ -348,7 +377,7 @@ function Dashboard() {
             </div>
           </div>
 
-          {txQuery.isLoading ? (
+          {isLoadingTransactions ? (
             <div className="py-8 text-center text-sm text-slate-500 animate-pulse">Loading transactions…</div>
           ) : (
             <>
@@ -377,10 +406,10 @@ function Dashboard() {
                             <div>{f.date}</div>
                             {f.time && <div className="text-[11px] text-slate-400">{f.time}</div>}
                           </td>
-                          <td className="py-3 pr-3 font-medium">{t.description}</td>
+                          <td className="py-3 pr-3 font-bold">{t.description}</td>
                           <td className="py-3 pr-3"><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</span></td>
                           <td className="py-3 pr-3 text-xs text-slate-500 capitalize">{t.accountType}</td>
-                          <td className={`py-3 pr-3 text-right font-semibold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
+                          <td className={`py-3 pr-3 text-right font-bold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
                             {t.amount > 0 ? "+" : "-"}${Math.abs(t.amount).toFixed(2)}
                           </td>
                           <td className="py-3 text-right">
@@ -395,7 +424,7 @@ function Dashboard() {
                                 status: t.amount > 0 ? "Received" : "Posted",
                                 date: t.date,
                               })}
-                              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:border-red-300 hover:text-red-700"
+                              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-bold text-slate-700 hover:border-red-300 hover:text-red-700"
                             >
                               View
                             </button>
@@ -419,7 +448,7 @@ function Dashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-slate-500">{f.date}{f.time ? ` · ${f.time}` : ""}</div>
-                          <div className="mt-1 truncate font-semibold text-slate-900">{t.description}</div>
+                          <div className="mt-1 truncate font-bold text-slate-900">{t.description}</div>
                           <div className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t.category}</div>
                         </div>
                         <div className={`shrink-0 text-base font-bold ${t.amount > 0 ? "text-emerald-700" : "text-slate-900"}`}>
@@ -460,29 +489,29 @@ function AccountCard({ name, balance, sub, loading, onClick }: { name: string; b
     <button type="button" onClick={onClick} className="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-red-300 hover:shadow-md">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase tracking-wide text-slate-500">{name}</div>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-red-700">Details →</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-red-700">Details →</span>
       </div>
       <div className={`mt-2 text-3xl font-bold ${loading ? "animate-pulse text-slate-300" : ""}`}>{loading ? "Loading…" : balance}</div>
-      {sub && <div className="mt-1 text-xs font-medium text-emerald-700">{sub}</div>}
+      {sub && <div className="mt-1 text-xs font-bold text-emerald-700">{sub}</div>}
     </button>
   );
 }
 
-function ServiceTile({ label, sub, accent, icon, active, onClick }: { label: string; sub: string; accent: string; icon: string; active?: boolean; onClick?: () => void }) {
+function ServiceTile({ label, sub, accent, icon, active, onClick }: { label: string; sub: string; accent: string; icon: React.ReactNode; active?: boolean; onClick?: () => void }) {
   return (
     <button onClick={onClick} className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${accent} p-4 text-left text-white shadow-sm transition hover:shadow-md ${active ? "ring-2 ring-offset-2 ring-red-600" : ""}`}>
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 text-lg font-bold backdrop-blur">{icon}</div>
-      <div className="mt-3 text-sm font-semibold">{label}</div>
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur">{icon}</div>
+      <div className="mt-3 text-sm font-bold">{label}</div>
       <div className="text-[11px] opacity-80">{sub}</div>
     </button>
   );
 }
 
-function LinkTile({ to, label, sub, accent, icon }: { to: string; label: string; sub: string; accent: string; icon: string }) {
+function LinkTile({ to, label, sub, accent, icon }: { to: string; label: string; sub: string; accent: string; icon: React.ReactNode }) {
   return (
     <Link to={to} className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${accent} p-4 text-left text-white shadow-sm transition hover:shadow-md`}>
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 text-lg font-bold backdrop-blur">{icon}</div>
-      <div className="mt-3 text-sm font-semibold">{label}</div>
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur">{icon}</div>
+      <div className="mt-3 text-sm font-bold">{label}</div>
       <div className="text-[11px] opacity-80">{sub}</div>
     </Link>
   );
@@ -491,7 +520,7 @@ function LinkTile({ to, label, sub, accent, icon }: { to: string; label: string;
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
+      <span className="mb-1 block text-xs font-bold text-slate-600">{label}</span>
       {children}
     </label>
   );

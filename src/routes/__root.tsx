@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { ClientOnly } from "@/components/ClientOnly";

@@ -143,4 +143,3 @@ function Landing() {
     </div>
   );
 }
-
