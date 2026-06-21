@@ -8,6 +8,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/wallet", label: "Wallet" },
   { to: "/loans", label: "Loans" },
   { to: "/investments", label: "Investments" },
   { to: "/grants", label: "Grants" },
@@ -22,6 +23,16 @@ const BOTTOM_NAV = [
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
         <path d="M9 21V12h6v9" />
+      </svg>
+    ),
+  },
+  {
+    to: "/wallet",
+    label: "Wallet",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-5z" />
+        <path d="M16 12h.01" />
       </svg>
     ),
   },

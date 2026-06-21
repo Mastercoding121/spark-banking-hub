@@ -1,5 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/start-server-core";
 import { query, queryOne } from "./db";
+
+const SESSION_COOKIE = "fnx_session";
+
+async function requireSession(): Promise<string> {
+  const sid = getCookie(SESSION_COOKIE);
+  if (!sid) throw new Error("Not authenticated.");
+  const row = await queryOne<{ user_id: string }>(
+    "SELECT user_id FROM sessions WHERE id = $1 AND expires_at > NOW()",
+    [sid]
+  );
+  if (!row) throw new Error("Session expired. Please sign in again.");
+  return row.user_id;
+}
 
 export type StockQuote = {
   symbol: string;
@@ -8,6 +22,13 @@ export type StockQuote = {
   change: number;
   changePct: number;
   currency: string;
+};
+
+export type Position = {
+  symbol: string;
+  shares: number;
+  avgCost: number;
+  totalInvested: number;
 };
 
 const NAMES: Record<string, string> = {
@@ -53,6 +74,108 @@ export const getStockQuotes = createServerFn({ method: "GET" })
       }),
     );
     return { quotes: results.filter(Boolean) as StockQuote[], updatedAt: new Date().toISOString() };
+  });
+
+// ─── Portfolio ─────────────────────────────────────────────────────────────────
+
+export const getPortfolio = createServerFn({ method: "GET" }).handler(async (): Promise<Position[]> => {
+  const userId = await requireSession();
+  const rows = await query<{ symbol: string; shares: string; avg_cost: string; total_invested: string }>(
+    "SELECT symbol, shares, avg_cost, total_invested FROM investment_positions WHERE user_id = $1 AND shares > 0 ORDER BY symbol",
+    [userId]
+  );
+  return rows.map((r) => ({
+    symbol: r.symbol,
+    shares: parseFloat(r.shares),
+    avgCost: parseFloat(r.avg_cost),
+    totalInvested: parseFloat(r.total_invested),
+  }));
+});
+
+// ─── Submit investment order (DB-backed, balance-checked) ──────────────────────
+
+export const submitInvestmentOrder = createServerFn({ method: "POST" })
+  .inputValidator((input: { symbol: string; shares: number; side: "buy" | "sell"; pricePerShare: number }) => {
+    if (!input.symbol) throw new Error("Symbol required");
+    if (!input.shares || input.shares <= 0) throw new Error("Shares must be > 0");
+    if (input.side !== "buy" && input.side !== "sell") throw new Error("Invalid side");
+    if (!input.pricePerShare || input.pricePerShare <= 0) throw new Error("Price required");
+    return {
+      symbol: String(input.symbol).toUpperCase(),
+      shares: Math.round(input.shares * 1_000_000) / 1_000_000,
+      side: input.side,
+      pricePerShare: Math.round(input.pricePerShare * 100) / 100,
+    };
+  })
+  .handler(async ({ data }) => {
+    const userId = await requireSession();
+    const total = Math.round(data.shares * data.pricePerShare * 100) / 100;
+    const now = new Date().toISOString().split("T")[0];
+    const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+
+    if (data.side === "buy") {
+      const acc = await queryOne<{ balance: string }>(
+        "SELECT balance FROM accounts WHERE user_id = $1 AND type = 'checking'",
+        [userId]
+      );
+      if (!acc) throw new Error("Checking account not found.");
+      if (parseFloat(acc.balance) < total) throw new Error(`Insufficient funds. Available: $${parseFloat(acc.balance).toFixed(2)}, needed: $${total.toFixed(2)}.`);
+
+      await query("UPDATE accounts SET balance = balance - $1 WHERE user_id = $2 AND type = 'checking'", [total, userId]);
+
+      await query(
+        `INSERT INTO investment_positions (user_id, symbol, shares, avg_cost, total_invested)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id, symbol) DO UPDATE SET
+           avg_cost = (investment_positions.total_invested + EXCLUDED.total_invested) / (investment_positions.shares + EXCLUDED.shares),
+           shares = investment_positions.shares + EXCLUDED.shares,
+           total_invested = investment_positions.total_invested + EXCLUDED.total_invested,
+           updated_at = NOW()`,
+        [userId, data.symbol, data.shares, data.pricePerShare, total]
+      );
+
+      await query(
+        `INSERT INTO transactions (user_id, account_type, date, description, category, amount)
+         VALUES ($1, 'checking', $2, $3, 'Transfer', $4)`,
+        [userId, now, `Investment: Bought ${data.shares} ${data.symbol} @ $${data.pricePerShare.toFixed(2)}`, -total]
+      );
+
+      return { ok: true, orderId, side: "buy", symbol: data.symbol, shares: data.shares, total, message: `Bought ${data.shares} share${data.shares !== 1 ? "s" : ""} of ${data.symbol} for $${total.toFixed(2)}.` };
+    } else {
+      const pos = await queryOne<{ shares: string; avg_cost: string; total_invested: string }>(
+        "SELECT shares, avg_cost, total_invested FROM investment_positions WHERE user_id = $1 AND symbol = $2",
+        [userId, data.symbol]
+      );
+      if (!pos || parseFloat(pos.shares) < data.shares) {
+        throw new Error(`Insufficient shares. You hold ${pos ? parseFloat(pos.shares).toFixed(4) : "0"} ${data.symbol}.`);
+      }
+
+      const costBasisSold = parseFloat(pos.avg_cost) * data.shares;
+
+      await query("UPDATE accounts SET balance = balance + $1 WHERE user_id = $2 AND type = 'checking'", [total, userId]);
+
+      await query(
+        `UPDATE investment_positions SET
+           shares = shares - $1,
+           total_invested = GREATEST(0, total_invested - $2),
+           updated_at = NOW()
+         WHERE user_id = $3 AND symbol = $4`,
+        [data.shares, costBasisSold, userId, data.symbol]
+      );
+
+      await query(
+        "DELETE FROM investment_positions WHERE user_id = $1 AND symbol = $2 AND shares <= 0.000001",
+        [userId, data.symbol]
+      );
+
+      await query(
+        `INSERT INTO transactions (user_id, account_type, date, description, category, amount)
+         VALUES ($1, 'checking', $2, $3, 'Transfer', $4)`,
+        [userId, now, `Investment: Sold ${data.shares} ${data.symbol} @ $${data.pricePerShare.toFixed(2)}`, total]
+      );
+
+      return { ok: true, orderId, side: "sell", symbol: data.symbol, shares: data.shares, total, message: `Sold ${data.shares} share${data.shares !== 1 ? "s" : ""} of ${data.symbol} for $${total.toFixed(2)}.` };
+    }
   });
 
 // ─── Loan application (DB-backed) ─────────────────────────────────────────────
@@ -187,20 +310,6 @@ export const getLoanStatus = createServerFn({ method: "GET" })
         underwritingNotes: app.underwriting_notes || [],
       },
     };
-  });
-
-// ─── Investments (live quotes only, no order storage) ─────────────────────────
-
-export const submitInvestmentOrder = createServerFn({ method: "POST" })
-  .inputValidator((input: { symbol: string; shares: number; side: "buy" | "sell" }) => {
-    if (!input.symbol) throw new Error("Symbol required");
-    if (!input.shares || input.shares <= 0) throw new Error("Shares must be > 0");
-    if (input.side !== "buy" && input.side !== "sell") throw new Error("Invalid side");
-    return input;
-  })
-  .handler(async ({ data }) => {
-    const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
-    return { ok: true, orderId, message: `${data.side.toUpperCase()} ${data.shares} ${data.symbol} order submitted. Contact your advisor for confirmation.` };
   });
 
 // ─── Support ──────────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SupportRouteImport } from './routes/support'
@@ -33,6 +34,11 @@ import { Route as AdminGrantsRouteImport } from './routes/admin/grants'
 import { Route as AdminFeaturesRouteImport } from './routes/admin/features'
 import { Route as AdminUsersUserIdRouteImport } from './routes/admin/users.$userId'
 
+const WalletRoute = WalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
   path: '/verify',
@@ -164,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/verify': typeof VerifyRoute
+  '/wallet': typeof WalletRoute
   '/admin/features': typeof AdminFeaturesRoute
   '/admin/grants': typeof AdminGrantsRoute
   '/admin/loans': typeof AdminLoansRoute
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/verify': typeof VerifyRoute
+  '/wallet': typeof WalletRoute
   '/admin/features': typeof AdminFeaturesRoute
   '/admin/grants': typeof AdminGrantsRoute
   '/admin/loans': typeof AdminLoansRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/verify': typeof VerifyRoute
+  '/wallet': typeof WalletRoute
   '/admin/features': typeof AdminFeaturesRoute
   '/admin/grants': typeof AdminGrantsRoute
   '/admin/loans': typeof AdminLoansRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/verify'
+    | '/wallet'
     | '/admin/features'
     | '/admin/grants'
     | '/admin/loans'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/verify'
+    | '/wallet'
     | '/admin/features'
     | '/admin/grants'
     | '/admin/loans'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/verify'
+    | '/wallet'
     | '/admin/features'
     | '/admin/grants'
     | '/admin/loans'
@@ -316,11 +328,19 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   VerifyRoute: typeof VerifyRoute
+  WalletRoute: typeof WalletRoute
   LoansIdRoute: typeof LoansIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wallet': {
+      id: '/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof WalletRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify': {
       id: '/verify'
       path: '/verify'
@@ -536,6 +556,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   VerifyRoute: VerifyRoute,
+  WalletRoute: WalletRoute,
   LoansIdRoute: LoansIdRoute,
 }
 export const routeTree = rootRouteImport
