@@ -4,9 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { authStore, SECURITY_QUESTIONS } from "@/lib/auth";
 import { holderStore } from "@/lib/store";
 import { signUp } from "@/lib/user.functions";
-import { BrandLogo } from "@/components/BrandLogo";
 import { ClientOnly } from "@/components/ClientOnly";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { PublicLayout } from "@/components/PublicLayout";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -51,22 +51,8 @@ function SignupPage() {
 
   return (
     <ClientOnly>
-      <div className="relative min-h-screen overflow-hidden bg-slate-900 font-sans text-white">
-        <div className="absolute inset-0 -z-10 bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?auto=format&fit=crop&w=1920&q=70')" }} />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-red-950/90 via-slate-950/85 to-slate-900/90" />
-
-        <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
-          <Link to="/" className="flex items-center gap-3">
-            <BrandLogo height="h-9" className="text-white/60" />
-            <div className="leading-tight">
-              <div className="text-lg font-bold tracking-tight">FINEXTHUB</div>
-              <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA</div>
-            </div>
-          </Link>
-          <Link to="/" className="text-xs text-white/80 hover:text-amber-300">← Back to sign in</Link>
-        </header>
-
-        <main className="mx-auto max-w-2xl px-4 pb-12">
+      <PublicLayout>
+        <div className="mx-auto max-w-2xl px-4 pb-12">
           <div className="rounded-2xl border border-white/10 bg-white/10 p-5 shadow-2xl backdrop-blur-xl sm:p-8">
             <div className="text-xs uppercase tracking-widest text-amber-300">Open an account</div>
             <h1 className="mb-1 text-2xl font-bold sm:text-3xl">Welcome to FinextHub</h1>
@@ -107,8 +93,8 @@ function SignupPage() {
               </p>
             </form>
           </div>
-        </main>
-      </div>
+        </div>
+      </PublicLayout>
     </ClientOnly>
   );
 }

@@ -8,6 +8,7 @@ import { holderStore } from "@/lib/store";
 import { authStore } from "@/lib/auth";
 import { sendOtp, verifyOtp } from "@/lib/otp.functions";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { PublicLayout } from "@/components/PublicLayout";
 
 export const Route = createFileRoute("/verify")({
   head: () => ({
@@ -145,213 +146,196 @@ function VerifyPage() {
   const isBusy = sendMut.isPending || verifyMut.isPending;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#040a14] font-sans text-white selection:bg-amber-400/30">
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" />
+    <PublicLayout>
+      <div className="relative overflow-hidden">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" />
 
-      {/* Ambient glow orbs */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-[600px] w-[600px] rounded-full bg-amber-500/10 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-20 h-[500px] w-[500px] rounded-full bg-red-700/15 blur-[100px]" />
-        <div className="absolute left-1/2 top-1/3 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-amber-400/5 blur-[80px]" />
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage: "linear-gradient(rgba(251,191,36,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(251,191,36,0.6) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
-          }}
-        />
-      </div>
-
-      {/* Header */}
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <Link to="/" className="flex items-center gap-3">
-          <BrandLogo height="h-9" className="text-white/50" />
-          <div className="leading-tight">
-            <div className="text-base font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FINEXTHUB</div>
-            <div className="text-[9px] uppercase tracking-[0.3em] text-white/50">Bank of USA</div>
-          </div>
-        </Link>
-        <Link to="/" className="text-xs text-white/50 transition hover:text-amber-300">← Back to sign in</Link>
-      </header>
-
-      {/* Main */}
-      <main className="mx-auto flex max-w-lg flex-col items-center px-4 py-10">
-
-        {/* Step indicator */}
-        <div className="mb-8 flex items-center gap-2 text-xs">
-          <StepDot label="Account" done />
-          <div className="h-px w-6 bg-white/20" />
-          <StepDot label="Verify" active />
-          <div className="h-px w-6 bg-white/20" />
-          <StepDot label="Dashboard" num={3} />
+        {/* Ambient glow orbs */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute -left-40 -top-40 h-[600px] w-[600px] rounded-full bg-amber-500/10 blur-[120px]" />
+          <div className="absolute -bottom-40 -right-20 h-[500px] w-[500px] rounded-full bg-red-700/15 blur-[100px]" />
+          <div className="absolute left-1/2 top-1/3 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-amber-400/5 blur-[80px]" />
         </div>
 
-        <div className="w-full rounded-3xl border border-white/[0.07] bg-white/[0.04] shadow-2xl shadow-black/60 backdrop-blur-2xl">
-          {verified ? (
-            <SuccessState />
-          ) : (
-            <div className="p-8 sm:p-10">
+        {/* Main */}
+        <main className="mx-auto flex max-w-lg flex-col items-center px-4 py-10">
 
-              {/* Envelope icon */}
-              <div className="mb-6 flex justify-center">
-                <div className="relative">
-                  <div className="absolute inset-0 animate-[ping_2s_ease-in-out_infinite] rounded-full bg-amber-400/15" />
-                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/20 ring-1 ring-amber-400/30">
-                    <svg className="h-8 w-8 text-amber-400" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
+          {/* Step indicator */}
+          <div className="mb-8 flex items-center gap-2 text-xs">
+            <StepDot label="Account" done />
+            <div className="h-px w-6 bg-white/20" />
+            <StepDot label="Verify" active />
+            <div className="h-px w-6 bg-white/20" />
+            <StepDot label="Dashboard" num={3} />
+          </div>
+
+          <div className="w-full rounded-3xl border border-white/[0.07] bg-white/[0.04] shadow-2xl shadow-black/60 backdrop-blur-2xl">
+            {verified ? (
+              <SuccessState />
+            ) : (
+              <div className="p-8 sm:p-10">
+
+                {/* Envelope icon */}
+                <div className="mb-6 flex justify-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 animate-[ping_2s_ease-in-out_infinite] rounded-full bg-amber-400/15" />
+                    <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/20 ring-1 ring-amber-400/30">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Headline */}
-              <div className="mb-1 text-center text-[10px] uppercase tracking-[0.35em] text-amber-400/70" style={{ fontFamily: "'Space Mono', monospace" }}>
-                Identity Verification
-              </div>
-              <h1 className="mb-2 text-center text-2xl font-bold tracking-tight sm:text-3xl" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Check your inbox
-              </h1>
+                {/* Headline */}
+                <div className="mb-1 text-center text-[10px] uppercase tracking-[0.35em] text-amber-400/70" style={{ fontFamily: "'Space Mono', monospace" }}>
+                  Identity Verification
+                </div>
+                <h1 className="mb-2 text-center text-2xl font-bold tracking-tight sm:text-3xl" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Check your inbox
+                </h1>
 
-              {/* Send state messaging */}
-              {sendMut.isPending && !emailSent ? (
-                <div className="mb-6 flex flex-col items-center gap-2">
-                  <div className="flex gap-1.5">
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                    ))}
+                {/* Send state messaging */}
+                {sendMut.isPending && !emailSent ? (
+                  <div className="mb-6 flex flex-col items-center gap-2">
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-white/50">Sending verification email…</p>
                   </div>
-                  <p className="text-sm text-white/50">Sending verification email…</p>
-                </div>
-              ) : (
-                <>
-                  <p className="mb-1 text-center text-sm text-white/50">We sent a 6-digit code to</p>
-                  <p className="mb-6 text-center text-sm font-semibold text-amber-300 break-all">{email || "your email"}</p>
-                </>
-              )}
+                ) : (
+                  <>
+                    <p className="mb-1 text-center text-sm text-white/50">We sent a 6-digit code to</p>
+                    <p className="mb-6 text-center text-sm font-semibold text-amber-300 break-all">{email || "your email"}</p>
+                  </>
+                )}
 
-              {/* Error from send */}
-              {sendMut.isError && (
-                <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-center text-sm text-red-300">
-                  {(sendMut.error as any)?.message ?? "Failed to send email."}
-                  <button
-                    type="button"
-                    onClick={() => { const user = authStore.current(); sendMut.mutate({ email, name: user?.name }); }}
-                    className="ml-2 underline underline-offset-2 hover:text-red-200"
-                  >
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              {/* OTP digit inputs */}
-              <form onSubmit={handleVerify}>
-                <div
-                  className="mb-2 flex justify-center gap-2 sm:gap-3"
-                  style={shake ? { animation: "shake 0.5s ease-in-out" } : {}}
-                >
-                  {digits.map((d, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => { inputRefs.current[i] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={d}
-                      disabled={isBusy || sendMut.isError}
-                      onChange={(e) => handleInput(i, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(i, e)}
-                      onPaste={handlePaste}
-                      onFocus={(e) => e.target.select()}
-                      autoFocus={i === 0}
-                      className={`h-12 w-10 rounded-xl border text-center text-xl font-bold outline-none transition-all sm:h-14 sm:w-12 sm:text-2xl disabled:opacity-40 ${
-                        d
-                          ? "border-amber-400/70 bg-amber-400/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.25)]"
-                          : "border-white/10 bg-white/[0.04] text-white"
-                      } focus:border-amber-400/80 focus:bg-amber-400/[0.08] focus:shadow-[0_0_18px_rgba(251,191,36,0.3)]`}
-                      style={{ fontFamily: "'Space Mono', monospace" }}
-                    />
-                  ))}
-                </div>
-
-                {/* Fill progress bar */}
-                <div className="mb-4 h-0.5 w-full overflow-hidden rounded-full bg-white/5">
-                  <div
-                    className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-300"
-                    style={{ width: `${(filled / OTP_LENGTH) * 100}%` }}
-                  />
-                </div>
-
-                {error && (
-                  <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2.5 text-center text-sm text-red-300">
-                    {error}
+                {/* Error from send */}
+                {sendMut.isError && (
+                  <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-center text-sm text-red-300">
+                    {(sendMut.error as any)?.message ?? "Failed to send email."}
+                    <button
+                      type="button"
+                      onClick={() => { const user = authStore.current(); sendMut.mutate({ email, name: user?.name }); }}
+                      className="ml-2 underline underline-offset-2 hover:text-red-200"
+                    >
+                      Retry
+                    </button>
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={filled < OTP_LENGTH || isBusy || sendMut.isError}
-                  className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 py-3 text-sm font-bold text-red-950 shadow-lg shadow-amber-500/20 transition hover:from-amber-300 hover:to-amber-500 hover:shadow-amber-400/30 disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center gap-2"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  {verifyMut.isPending ? <><LoadingSpinner size="sm" /> Verifying…</> : "Verify & Continue →"}
-                </button>
-              </form>
+                {/* OTP digit inputs */}
+                <form onSubmit={handleVerify}>
+                  <div
+                    className="mb-2 flex justify-center gap-2 sm:gap-3"
+                    style={shake ? { animation: "shake 0.5s ease-in-out" } : {}}
+                  >
+                    {digits.map((d, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => { inputRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={d}
+                        disabled={isBusy || sendMut.isError}
+                        onChange={(e) => handleInput(i, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(i, e)}
+                        onPaste={handlePaste}
+                        onFocus={(e) => e.target.select()}
+                        autoFocus={i === 0}
+                        className={`h-12 w-10 rounded-xl border text-center text-xl font-bold outline-none transition-all sm:h-14 sm:w-12 sm:text-2xl disabled:opacity-40 ${
+                          d
+                            ? "border-amber-400/70 bg-amber-400/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.25)]"
+                            : "border-white/10 bg-white/[0.04] text-white"
+                        } focus:border-amber-400/80 focus:bg-amber-400/[0.08] focus:shadow-[0_0_18px_rgba(251,191,36,0.3)]`}
+                        style={{ fontFamily: "'Space Mono', monospace" }}
+                      />
+                    ))}
+                  </div>
 
-              {/* Resend — only shown after the first email is confirmed sent */}
-              {emailSent && (
-                <div className="mt-5 text-center text-xs text-white/40">
-                  Didn&apos;t get it?{" "}
-                  {countdown > 0 ? (
-                    <span>
-                      Resend in{" "}
-                      <span className="font-semibold tabular-nums text-amber-400/80" style={{ fontFamily: "'Space Mono', monospace" }}>
-                        {countdown}s
-                      </span>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleResend}
-                      disabled={sendMut.isPending}
-                      className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {sendMut.isPending ? <><LoadingSpinner size="sm" /> Sending…</> : "Resend code"}
-                    </button>
+                  {/* Fill progress bar */}
+                  <div className="mb-4 h-0.5 w-full overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-300"
+                      style={{ width: `${(filled / OTP_LENGTH) * 100}%` }}
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2.5 text-center text-sm text-red-300">
+                      {error}
+                    </div>
                   )}
+
+                  <button
+                    type="submit"
+                    disabled={filled < OTP_LENGTH || isBusy || sendMut.isError}
+                    className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 py-3 text-sm font-bold text-red-950 shadow-lg shadow-amber-500/20 transition hover:from-amber-300 hover:to-amber-500 hover:shadow-amber-400/30 disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center gap-2"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {verifyMut.isPending ? <><LoadingSpinner size="sm" /> Verifying…</> : "Verify & Continue →"}
+                  </button>
+                </form>
+
+                {/* Resend — only shown after the first email is confirmed sent */}
+                {emailSent && (
+                  <div className="mt-5 text-center text-xs text-white/40">
+                    Didn&apos;t get it?{" "}
+                    {countdown > 0 ? (
+                      <span>
+                        Resend in{" "}
+                        <span className="font-semibold tabular-nums text-amber-400/80" style={{ fontFamily: "'Space Mono', monospace" }}>
+                          {countdown}s
+                        </span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResend}
+                        disabled={sendMut.isPending}
+                        className="font-semibold text-amber-300 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {sendMut.isPending ? <><LoadingSpinner size="sm" /> Sending…</> : "Resend code"}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Security badge */}
+                <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-white/25">
+                  <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  256-bit encrypted · Code expires in 10 minutes
                 </div>
-              )}
-
-              {/* Security badge */}
-              <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-white/25">
-                <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                256-bit encrypted · Code expires in 10 minutes
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <p className="mt-6 text-center text-xs text-white/30">
-          Wrong email?{" "}
-          <Link to="/signup" className="text-amber-400/60 underline underline-offset-2 transition hover:text-amber-300">
-            Create a new account
-          </Link>
-        </p>
-      </main>
+          <p className="mt-6 text-center text-xs text-white/30">
+            Wrong email?{" "}
+            <Link to="/signup" className="text-amber-400/60 underline underline-offset-2 transition hover:text-amber-300">
+              Create a new account
+            </Link>
+          </p>
+        </main>
 
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          15% { transform: translateX(-6px); }
-          30% { transform: translateX(6px); }
-          45% { transform: translateX(-4px); }
-          60% { transform: translateX(4px); }
-          75% { transform: translateX(-2px); }
-          90% { transform: translateX(2px); }
-        }
-      `}</style>
-    </div>
+        <style>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            15% { transform: translateX(-6px); }
+            30% { transform: translateX(6px); }
+            45% { transform: translateX(-4px); }
+            60% { transform: translateX(4px); }
+            75% { transform: translateX(-2px); }
+            90% { transform: translateX(2px); }
+          }
+        `}</style>
+      </div>
+    </PublicLayout>
   );
 }
 

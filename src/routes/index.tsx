@@ -4,8 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { holderStore } from "@/lib/store";
 import { authStore, useAuth } from "@/lib/auth";
 import { signIn } from "@/lib/user.functions";
-import { BrandLogo } from "@/components/BrandLogo";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { PublicLayout } from "@/components/PublicLayout";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,28 +46,8 @@ function Landing() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-900 font-sans text-white">
-      <div
-        className="absolute inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?auto=format&fit=crop&w=1920&q=70')" }}
-      />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-red-950/90 via-slate-950/85 to-slate-900/90" />
-      <div className="absolute inset-0 -z-10 opacity-30 [background-image:radial-gradient(circle_at_20%_30%,rgba(251,191,36,0.25),transparent_45%),radial-gradient(circle_at_80%_70%,rgba(220,38,38,0.35),transparent_45%)]" />
-
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5">
-        <div className="flex items-center gap-3">
-          <BrandLogo height="h-10" className="text-white/60" />
-          <div className="leading-tight">
-            <div className="text-xl font-bold tracking-tight">FINEXTHUB</div>
-            <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA · Since 1892</div>
-          </div>
-        </div>
-        <div className="hidden gap-5 text-xs font-medium opacity-90 md:flex">
-          <span>FDIC Insured</span><span>Equal Housing Lender</span><span>256-bit SSL</span>
-        </div>
-      </header>
-
-      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-2 lg:items-center">
+    <PublicLayout>
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-2 lg:items-center">
         {/* Hero */}
         <div className="max-w-lg">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-300">
@@ -139,7 +119,7 @@ function Landing() {
             <span>Member FDIC</span>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </PublicLayout>
   );
 }
