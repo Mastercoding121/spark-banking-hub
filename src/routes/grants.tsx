@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { EnhancedLoadingScreen } from "@/components/EnhancedLoadingScreen";
 import { getPublicGrants, applyForGrant, getMyGrantApplications, type Grant } from "@/lib/grants.functions";
 import { getFeatureFlags } from "@/lib/feature-flags.functions";
 
@@ -135,13 +136,10 @@ function GrantsPage() {
   
   if (isLoading) {
     return (
-      <BankShell>
-        <main className="mx-auto max-w-7xl px-4 py-20 text-center">
-          <LoadingSpinner size="lg" />
-          <h2 className="mt-4 text-2xl font-bold">Preparing your grants…</h2>
-          <p className="mt-2 text-slate-500">Please wait while we load your account data.</p>
-        </main>
-      </BankShell>
+      <EnhancedLoadingScreen
+        title="Preparing your grants…"
+        subtitle="Please wait while we load your account data."
+      />
     );
   }
 

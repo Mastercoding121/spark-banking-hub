@@ -6,6 +6,7 @@ import { authStore, useAuth } from "@/lib/auth";
 import { signIn } from "@/lib/user.functions";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PublicLayout } from "@/components/PublicLayout";
+import { EnhancedLoadingScreen } from "@/components/EnhancedLoadingScreen";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,13 +53,10 @@ function Landing() {
 
   if (isRedirecting) {
     return (
-      <PublicLayout>
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-          <LoadingSpinner size="lg" className="text-white" />
-          <h2 className="mt-4 text-2xl font-bold text-white">Redirecting to your dashboard…</h2>
-          <p className="mt-2 text-white/60">Please wait while we prepare your account.</p>
-        </div>
-      </PublicLayout>
+      <EnhancedLoadingScreen
+        title="Redirecting to your dashboard…"
+        subtitle="Please wait while we prepare your account."
+      />
     );
   }
 
