@@ -20,11 +20,10 @@ import {
   Landmark,
   TrendingUp,
   ArrowLeftRight,
-  Send,
   CreditCard,
   Smartphone,
+  Wallet,
 } from "lucide-react";
-import { SiZelle, SiApple, SiChime } from "react-icons/si";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -228,9 +227,9 @@ function Dashboard() {
             <LinkTile to="/loans" label="Loans" sub="Apply & track" accent="from-blue-600 to-blue-800" icon={<Landmark className="h-6 w-6" />} />
             <LinkTile to="/investments" label="Investments" sub="Live market rates" accent="from-amber-500 to-orange-600" icon={<TrendingUp className="h-6 w-6" />} />
             <ServiceTile label="Transfers" sub="Internal · ACH · Wire" accent="from-red-600 to-red-800" icon={<ArrowLeftRight className="h-6 w-6" />} active={method === "internal" || method === "ach"} onClick={() => setMethod("internal")} />
-            <ServiceTile label="Zelle" sub="Send in minutes" accent="from-violet-600 to-purple-700" icon={<SiZelle className="h-6 w-6" />} active={method === "zelle"} onClick={() => setMethod("zelle")} />
-            <ServiceTile label="Apple Pay" sub="Tap to pay" accent="from-slate-800 to-black" icon={<SiApple className="h-6 w-6" />} active={method === "applepay"} onClick={() => setMethod("applepay")} />
-            <ServiceTile label="Chime" sub="Instant transfer" accent="from-emerald-500 to-emerald-700" icon={<SiChime className="h-6 w-6" />} active={method === "chime"} onClick={() => setMethod("chime")} />
+            <ServiceTile label="Zelle" sub="Send in minutes" accent="from-violet-600 to-purple-700" icon={<Smartphone className="h-6 w-6" />} active={method === "zelle"} onClick={() => setMethod("zelle")} />
+            <ServiceTile label="Apple Pay" sub="Tap to pay" accent="from-slate-800 to-black" icon={<CreditCard className="h-6 w-6" />} active={method === "applepay"} onClick={() => setMethod("applepay")} />
+            <ServiceTile label="Chime" sub="Instant transfer" accent="from-emerald-500 to-emerald-700" icon={<Wallet className="h-6 w-6" />} active={method === "chime"} onClick={() => setMethod("chime")} />
           </div>
         </section>
 
