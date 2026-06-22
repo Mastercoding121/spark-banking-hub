@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { getStockQuotes, submitInvestmentOrder, getPortfolio, type Position } from "@/lib/finance.functions";
 import { getAccounts } from "@/lib/account.functions";
 import { getFeatureFlags } from "@/lib/feature-flags.functions";
@@ -146,10 +147,16 @@ function InvestmentsPage() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate({ to: "/" });
+    } else {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2500); // 2.5 seconds
+      return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
 
@@ -189,6 +196,18 @@ function InvestmentsPage() {
 
   const quoteMap: Record<string, number> = {};
   for (const q of quotesQuery.data?.quotes ?? []) quoteMap[q.symbol] = q.price;
+
+  if (isLoading) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-7xl px-4 py-20 text-center">
+          <LoadingSpinner size="lg" />
+          <h2 className="mt-4 text-2xl font-bold">Preparing your investments…</h2>
+          <p className="mt-2 text-slate-500">Please wait while we load your account data.</p>
+        </main>
+      </BankShell>
+    );
+  }
 
   if (flagsQuery.data && !invFlag?.enabled) {
     return (

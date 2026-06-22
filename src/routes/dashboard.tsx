@@ -44,10 +44,16 @@ function Dashboard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const holder = useHolder();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate({ to: "/" });
+    } else {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2500); // 2.5 seconds
+      return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
   const [openAccount, setOpenAccount] = useState<AccountKey | null>(null);
@@ -219,6 +225,18 @@ function Dashboard() {
   };
 
   const openAccountBalance = openAccount === "checking" ? checking : savings;
+
+  if (isLoading) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-7xl px-4 py-20 text-center">
+          <LoadingSpinner size="lg" />
+          <h2 className="mt-4 text-2xl font-bold">Preparing your dashboard…</h2>
+          <p className="mt-2 text-slate-500">Please wait while we load your account data.</p>
+        </main>
+      </BankShell>
+    );
+  }
 
   return (
     <BankShell>

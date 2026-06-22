@@ -22,10 +22,16 @@ function DownloadsPage() {
   const navigate = useNavigate();
   const [release, setRelease] = useState<Release | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate({ to: "/" });
+    } else {
+      const timer = setTimeout(() => {
+        setIsPageLoading(false);
+      }, 2500); // 2.5 seconds
+      return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
 
@@ -45,6 +51,18 @@ function DownloadsPage() {
     }
     fetchRelease();
   }, []);
+
+  if (isPageLoading) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-3xl px-4 py-20 text-center">
+          <LoadingSpinner size="lg" />
+          <h2 className="mt-4 text-2xl font-bold">Preparing your downloads…</h2>
+          <p className="mt-2 text-slate-500">Please wait while we load your account data.</p>
+        </main>
+      </BankShell>
+    );
+  }
 
   if (loading) {
     return (

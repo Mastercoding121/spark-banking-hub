@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { getPublicGrants, applyForGrant, getMyGrantApplications, type Grant } from "@/lib/grants.functions";
 import { getFeatureFlags } from "@/lib/feature-flags.functions";
 
@@ -110,10 +111,16 @@ function GrantsPage() {
   const flagsFn = useServerFn(getFeatureFlags);
   const grantsFn = useServerFn(getPublicGrants);
   const myAppsFn = useServerFn(getMyGrantApplications);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate({ to: "/" });
+    } else {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2500); // 2.5 seconds
+      return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
 
@@ -125,6 +132,19 @@ function GrantsPage() {
   const myAppsQuery = useQuery({ queryKey: ["my-grant-apps"], queryFn: () => myAppsFn({}) });
 
   const grantsFlag = flagsQuery.data?.grants;
+  
+  if (isLoading) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-7xl px-4 py-20 text-center">
+          <LoadingSpinner size="lg" />
+          <h2 className="mt-4 text-2xl font-bold">Preparing your grants…</h2>
+          <p className="mt-2 text-slate-500">Please wait while we load your account data.</p>
+        </main>
+      </BankShell>
+    );
+  }
+
   if (flagsQuery.data && !grantsFlag?.enabled) {
     return (
       <BankShell>

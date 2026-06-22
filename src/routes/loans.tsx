@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useEffect, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
 import { useHolder } from "@/lib/store";
 import { authStore } from "@/lib/auth";
@@ -174,10 +175,16 @@ function LoansPage() {
   const navigate = useNavigate();
   const holder = useHolder();
   const currentUser = authStore.current();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate({ to: "/" });
+    } else {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2500); // 2.5 seconds
+      return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
 
@@ -219,6 +226,18 @@ function LoansPage() {
     setAmount(Math.max(p.minAmount, Math.min(amount, p.maxAmount)));
     if (!p.terms.includes(term)) setTerm(p.terms[Math.floor(p.terms.length / 2)]);
   };
+
+  if (isLoading) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-7xl px-4 py-20 text-center">
+          <LoadingSpinner size="lg" />
+          <h2 className="mt-4 text-2xl font-bold">Preparing your loans…</h2>
+          <p className="mt-2 text-slate-500">Please wait while we load your account data.</p>
+        </main>
+      </BankShell>
+    );
+  }
 
   if (flagsQuery.data && !loansFlag?.enabled) {
     return (

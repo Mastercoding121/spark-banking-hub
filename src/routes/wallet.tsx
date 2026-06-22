@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
@@ -94,10 +94,16 @@ function WalletPage() {
   const fetchAccounts = useServerFn(getAccounts);
   const fetchPortfolio = useServerFn(getPortfolio);
   const fetchQuotes = useServerFn(getStockQuotes);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate({ to: "/" });
+    } else {
+      const timer = setTimeout(() => {
+        setIsPageLoading(false);
+      }, 2500); // 2.5 seconds
+      return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
 
@@ -134,7 +140,19 @@ function WalletPage() {
   const portfolioPnlPct = totalInvested > 0 ? (portfolioPnl / totalInvested) * 100 : 0;
   const netWorth = checking + savings + portfolioValue;
 
-  const isLoading = accountsQuery.isLoading || portfolioQuery.isLoading;
+  const isContentLoading = accountsQuery.isLoading || portfolioQuery.isLoading;
+
+  if (isPageLoading) {
+    return (
+      <BankShell>
+        <main className="mx-auto max-w-4xl px-4 py-20 text-center">
+          <LoadingSpinner size="lg" />
+          <h2 className="mt-4 text-2xl font-bold">Preparing your wallet…</h2>
+          <p className="mt-2 text-slate-500">Please wait while we load your account data.</p>
+        </main>
+      </BankShell>
+    );
+  }
 
   return (
     <BankShell>
@@ -152,7 +170,7 @@ function WalletPage() {
           <div className="relative">
             <div className="text-xs font-semibold uppercase tracking-widest text-white/60">Total Net Worth</div>
             <div className="mt-2 flex items-center gap-2">
-              {isLoading ? (
+              {isContentLoading ? (
                 <>
                   <LoadingSpinner size="lg" className="text-white" />
                   <span className="text-3xl font-bold tabular-nums text-white/60">Calculating…</span>

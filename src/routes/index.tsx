@@ -24,14 +24,19 @@ function Landing() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const signInFn = useServerFn(signIn);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      navigate({ to: "/dashboard" });
+    if (isLoggedIn && !isRedirecting) {
+      setIsRedirecting(true);
+      const timer = setTimeout(() => {
+        navigate({ to: "/dashboard" });
+      }, 2500); // 2.5 seconds
+      return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, isRedirecting]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +49,18 @@ function Landing() {
     } catch (err: any) { setError(err?.message ?? "Sign in failed."); }
     finally { setBusy(false); }
   };
+
+  if (isRedirecting) {
+    return (
+      <PublicLayout>
+        <div className="mx-auto max-w-7xl px-4 py-20 text-center">
+          <LoadingSpinner size="lg" className="text-white" />
+          <h2 className="mt-4 text-2xl font-bold text-white">Redirecting to your dashboard…</h2>
+          <p className="mt-2 text-white/60">Please wait while we prepare your account.</p>
+        </div>
+      </PublicLayout>
+    );
+  }
 
   return (
     <PublicLayout>
