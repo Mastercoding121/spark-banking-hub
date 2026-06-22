@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { getAccounts } from "@/lib/account.functions";
@@ -23,9 +24,9 @@ function fmt(n: number) {
 }
 
 function BalanceCard({
-  label, sub, balance, accent, icon,
+  label, sub, balance, accent, icon, loading,
 }: {
-  label: string; sub: string; balance: number; accent: string; icon: React.ReactNode;
+  label: string; sub: string; balance: number; accent: string; icon: React.ReactNode; loading?: boolean;
 }) {
   return (
     <div className={`rounded-2xl p-6 text-white ${accent} shadow-md`}>
@@ -36,7 +37,16 @@ function BalanceCard({
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">{icon}</div>
       </div>
-      <div className="text-3xl font-bold tabular-nums">${fmt(balance)}</div>
+      <div className="flex items-center gap-2">
+        {loading ? (
+          <>
+            <LoadingSpinner size="md" className="text-white" />
+            <span className="text-xl font-bold tabular-nums text-white/60">Loading…</span>
+          </>
+        ) : (
+          <div className="text-3xl font-bold tabular-nums">${fmt(balance)}</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -141,8 +151,15 @@ function WalletPage() {
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 70% 50%, #dc2626 0%, transparent 60%)" }} />
           <div className="relative">
             <div className="text-xs font-semibold uppercase tracking-widest text-white/60">Total Net Worth</div>
-            <div className="mt-2 text-5xl font-bold tabular-nums">
-              {isLoading ? <span className="animate-pulse text-3xl text-white/40">Calculating…</span> : `$${fmt(netWorth)}`}
+            <div className="mt-2 flex items-center gap-2">
+              {isLoading ? (
+                <>
+                  <LoadingSpinner size="lg" className="text-white" />
+                  <span className="text-3xl font-bold tabular-nums text-white/60">Calculating…</span>
+                </>
+              ) : (
+                <span className="text-5xl font-bold tabular-nums">${fmt(netWorth)}</span>
+              )}
             </div>
             <div className="mt-3 flex flex-wrap gap-4 text-sm text-white/70">
               <div><span className="text-white/50">Checking</span> <span className="font-semibold text-white">${fmt(checking)}</span></div>
@@ -160,6 +177,7 @@ function WalletPage() {
             label="Checking"
             sub="FinextHub Checking"
             balance={checking}
+            loading={accountsQuery.isLoading}
             accent="bg-gradient-to-br from-slate-800 to-slate-700"
             icon={
               <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -172,6 +190,7 @@ function WalletPage() {
             label="Savings"
             sub="4.25% APY · FDIC Insured"
             balance={savings}
+            loading={accountsQuery.isLoading}
             accent="bg-gradient-to-br from-blue-700 to-blue-600"
             icon={
               <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -184,6 +203,7 @@ function WalletPage() {
             label="Investments"
             sub={positions.length > 0 ? `${positions.length} position${positions.length !== 1 ? "s" : ""}` : "No positions yet"}
             balance={portfolioValue}
+            loading={portfolioQuery.isLoading}
             accent={`bg-gradient-to-br ${portfolioPnl >= 0 ? "from-emerald-700 to-emerald-600" : "from-red-700 to-red-600"}`}
             icon={
               <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

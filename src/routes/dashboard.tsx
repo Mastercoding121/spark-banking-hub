@@ -16,7 +16,7 @@ import { ReceiptModal, type ReceiptData } from "@/components/Receipt";
 import { SecurityPrompt } from "@/components/SecurityPrompt";
 import { AccountDetailsModal, type AccountKey } from "@/components/AccountDetails";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, where, onSnapshot } from "firebase/firestore";
 import {
   Landmark,
   TrendingUp,
@@ -25,6 +25,7 @@ import {
   Smartphone,
   Wallet,
 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/dashboard")({
 type TransferMethod = "internal" | "ach" | "zelle" | "applepay" | "chime";
 
 function Dashboard() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const holder = useHolder();
@@ -63,11 +64,14 @@ function Dashboard() {
 
   // Real-time transaction listener
   useEffect(() => {
+    if (!user?.id) return;
+    
     setIsLoadingTransactions(true);
     const q = query(
       collection(db, "transactions"),
-      orderBy("timestamp", "desc"),
-      limit(20)
+      where("userId", "==", user.id),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -83,7 +87,7 @@ function Dashboard() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user?.id]);
 
   const accQuery = useQuery({
     queryKey: ["accounts"],
@@ -115,20 +119,43 @@ function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [txType, setTxType] = useState<"all" | "credit" | "debit">("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [dateFilter, setDateFilter] = useState<"all" | "7days" | "30days" | "custom">("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
   const filtered = useMemo(() => {
+    const today = new Date();
+    let fromDate: Date | null = null;
+    let toDate: Date | null = null;
+
+    if (dateFilter === "7days") {
+      fromDate = new Date(today);
+      fromDate.setDate(today.getDate() - 7);
+    } else if (dateFilter === "30days") {
+      fromDate = new Date(today);
+      fromDate.setDate(today.getDate() - 30);
+    } else if (dateFilter === "custom") {
+      fromDate = customFrom ? new Date(customFrom) : null;
+      toDate = customTo ? new Date(customTo) : null;
+    }
+
     return transactions.filter((t) => {
       if (searchQuery && !t.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (category !== "All" && t.category !== category) return false;
       if (txType === "credit" && t.amount <= 0) return false;
       if (txType === "debit" && t.amount >= 0) return false;
-      if (from && t.date < from) return false;
-      if (to && t.date > to) return false;
+      
+      const txDate = new Date(t.date);
+      if (fromDate && txDate < fromDate) return false;
+      if (toDate) {
+        const toDateEnd = new Date(toDate);
+        toDateEnd.setHours(23, 59, 59, 999);
+        if (txDate > toDateEnd) return false;
+      }
+      
       return true;
     });
-  }, [transactions, searchQuery, category, txType, from, to]);
+  }, [transactions, searchQuery, category, txType, dateFilter, customFrom, customTo]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["accounts"] });
@@ -365,7 +392,7 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
             <input
               value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search description…" className="rounded-md border border-slate-300 px-3 py-2 text-sm lg:col-span-2"
@@ -379,9 +406,35 @@ function Dashboard() {
               <option value="credit">Credits only</option>
               <option value="debit">Debits only</option>
             </select>
-            <div className="flex gap-1">
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-2 text-xs" />
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-2 text-xs" />
+            <div className="space-y-1">
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as any)}
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="all">All dates</option>
+                <option value="7days">Last 7 days</option>
+                <option value="30days">Last 30 days</option>
+                <option value="custom">Custom date range</option>
+              </select>
+              {dateFilter === "custom" && (
+                <div className="flex gap-1">
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    placeholder="From"
+                    className="w-full rounded-md border border-slate-300 px-2 py-2 text-xs"
+                  />
+                  <input
+                    type="date"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    placeholder="To"
+                    className="w-full rounded-md border border-slate-300 px-2 py-2 text-xs"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -499,7 +552,16 @@ function AccountCard({ name, balance, sub, loading, onClick }: { name: string; b
         <div className="text-xs uppercase tracking-wide text-slate-500">{name}</div>
         <span className="text-[10px] font-bold uppercase tracking-wider text-red-700">Details →</span>
       </div>
-      <div className={`mt-2 text-3xl font-bold ${loading ? "animate-pulse text-slate-300" : ""}`}>{loading ? "Loading…" : balance}</div>
+      <div className="mt-2 flex items-center gap-2">
+        {loading ? (
+          <>
+            <LoadingSpinner size="md" />
+            <span className="text-xl font-bold text-slate-400">Loading…</span>
+          </>
+        ) : (
+          <span className="text-3xl font-bold">{balance}</span>
+        )}
+      </div>
       {sub && <div className="mt-1 text-xs font-bold text-emerald-700">{sub}</div>}
     </button>
   );

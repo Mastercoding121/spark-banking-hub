@@ -15,7 +15,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       <header className="border-b border-white/10 bg-white/5 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2.5">
-            <BrandLogo height="h-9" />
+            <BrandLogo height="h-14" />
             <div className="hidden sm:block">
               <div className="text-base font-bold tracking-tight">FINEXTHUB</div>
               <div className="text-[9px] uppercase tracking-[0.25em] text-white/60">Bank of USA</div>

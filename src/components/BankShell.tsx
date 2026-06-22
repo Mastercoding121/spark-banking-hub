@@ -75,7 +75,7 @@ export function BankShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
           {/* Brand */}
           <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5">
-            <BrandLogo height="h-9" className="text-white/60" />
+            <BrandLogo height="h-12" className="text-white/60" />
             <div className="hidden leading-tight sm:block">
               <div className="text-base font-bold tracking-tight">FINEXTHUB</div>
               <div className="text-[9px] uppercase tracking-[0.25em] opacity-70">Bank of USA</div>
