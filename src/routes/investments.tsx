@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { getStockQuotes, submitInvestmentOrder, getPortfolio, type Position } from "@/lib/finance.functions";
 import { getAccounts } from "@/lib/account.functions";
@@ -142,7 +143,15 @@ function PortfolioSection({ positions, quotes }: { positions: Position[]; quotes
 }
 
 function InvestmentsPage() {
-  const queryClient = useQueryClient();
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
 
   const flagsFn = useServerFn(getFeatureFlags);
   const fetchQuotes = useServerFn(getStockQuotes);

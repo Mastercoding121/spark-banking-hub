@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useEffect, useSyncExternalStore } from "react";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { submitLoanApplication, getLoanStatus, type LoanStatus } from "@/lib/finance.functions";
 import { useHolder } from "@/lib/store";
@@ -169,8 +170,16 @@ function StatusTracker({ referenceId }: { referenceId: string }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 function LoansPage() {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const holder = useHolder();
   const currentUser = authStore.current();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
 
   const flagsFn = useServerFn(getFeatureFlags);
   const apply = useServerFn(submitLoanApplication);

@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { sendChimeTransfer, initiateApplePay } from "@/lib/finance.functions";
 import { getFeatureFlags } from "@/lib/feature-flags.functions";
@@ -38,8 +39,16 @@ export const Route = createFileRoute("/dashboard")({
 type TransferMethod = "internal" | "ach" | "zelle" | "applepay" | "chime";
 
 function Dashboard() {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const holder = useHolder();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
   const [openAccount, setOpenAccount] = useState<AccountKey | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);

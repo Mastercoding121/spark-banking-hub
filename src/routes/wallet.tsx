@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useEffect } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { getAccounts } from "@/lib/account.functions";
 import { getPortfolio, getStockQuotes, type Position } from "@/lib/finance.functions";
@@ -77,9 +78,17 @@ function AllocationBar({ positions, quotes }: { positions: Position[]; quotes: R
 }
 
 function WalletPage() {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const fetchAccounts = useServerFn(getAccounts);
   const fetchPortfolio = useServerFn(getPortfolio);
   const fetchQuotes = useServerFn(getStockQuotes);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
 
   const accountsQuery = useQuery({ queryKey: ["accounts"], queryFn: () => fetchAccounts({}) });
   const portfolioQuery = useQuery({ queryKey: ["portfolio"], queryFn: () => fetchPortfolio({}) });

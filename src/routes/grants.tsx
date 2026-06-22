@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { getPublicGrants, applyForGrant, getMyGrantApplications, type Grant } from "@/lib/grants.functions";
 import { getFeatureFlags } from "@/lib/feature-flags.functions";
@@ -104,9 +105,17 @@ function ApplyModal({ grant, onClose, onSuccess }: { grant: Grant; onClose: () =
 }
 
 function GrantsPage() {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const flagsFn = useServerFn(getFeatureFlags);
   const grantsFn = useServerFn(getPublicGrants);
   const myAppsFn = useServerFn(getMyGrantApplications);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
 
   const [applyGrant, setApplyGrant] = useState<Grant | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);

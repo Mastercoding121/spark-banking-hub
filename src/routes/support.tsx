@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { chatWithBot } from "@/lib/finance.functions";
 import { getOrCreateTicket, sendSupportMessage as persistMessage, getTicketMessages, submitSupportMessage } from "@/lib/support.functions";
@@ -206,10 +207,18 @@ function SupportBot() {
 }
 
 function SupportPage() {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const send = useServerFn(submitSupportMessage);
   const mutation = useMutation({
     mutationFn: (vars: { name: string; email: string; topic: string; message: string }) => send({ data: vars }),
   });
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
 
   const [name, setName] = useState("John Doe");
   const [email, setEmail] = useState("john.doe@example.com");

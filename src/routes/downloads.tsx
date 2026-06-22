@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { BrandLogo } from "@/components/BrandLogo";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { BankShell } from "@/components/BankShell";
 
 export const Route = createFileRoute("/downloads")({
   head: () => ({
@@ -19,8 +19,15 @@ interface Release {
 
 function DownloadsPage() {
   const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const [release, setRelease] = useState<Release | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
     async function fetchRelease() {
@@ -39,56 +46,31 @@ function DownloadsPage() {
     fetchRelease();
   }, []);
 
-  if (!isLoggedIn) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-900 text-white">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 text-3xl">🔒</div>
-        <h1 className="text-xl font-bold">Authentication Required</h1>
-        <p className="text-sm text-white/50">Please sign in to download releases.</p>
-        <Link to="/" className="mt-2 rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
-          Go to Sign In
-        </Link>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-900 text-white">
-        <LoadingSpinner size="lg" />
-        <p className="text-sm text-white/60">Loading releases...</p>
-      </div>
+      <BankShell>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      </BankShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5">
-        <Link to="/dashboard" className="flex items-center gap-3">
-          <BrandLogo height="h-10" className="text-white/60" />
-          <div className="leading-tight">
-            <div className="text-lg font-bold tracking-tight">FINEXTHUB</div>
-            <div className="text-[10px] uppercase tracking-[0.3em] opacity-80">Bank of USA</div>
-          </div>
-        </Link>
-        <nav className="flex items-center gap-6">
-          <Link to="/dashboard" className="text-sm text-white/80 hover:text-amber-300">Dashboard</Link>
-          <Link to="/profile" className="text-sm text-white/80 hover:text-amber-300">Profile</Link>
-        </nav>
-      </header>
-      <main className="mx-auto max-w-3xl px-4 py-16">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+    <BankShell>
+      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2">Downloads</h1>
-            <p className="text-sm text-white/60">Get the latest version of FinextHub apps</p>
+            <p className="text-sm text-slate-600">Get the latest version of FinextHub apps</p>
           </div>
 
           {release && (
-            <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-6">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-amber-300">Latest Release</h2>
-                  <p className="text-sm text-white/60">Version {release.latest} · Released {release.releaseDate}</p>
+                  <h2 className="text-xl font-semibold text-amber-800">Latest Release</h2>
+                  <p className="text-sm text-slate-600">Version {release.latest} · Released {release.releaseDate}</p>
                 </div>
                 <a
                   href={release.downloadUrl}
@@ -97,13 +79,13 @@ function DownloadsPage() {
                   Download
                 </a>
               </div>
-              <div className="text-xs text-white/40">
+              <div className="text-xs text-slate-500">
                 This release includes bug fixes and performance improvements.
               </div>
             </div>
           )}
         </div>
       </main>
-    </div>
+    </BankShell>
   );
 }

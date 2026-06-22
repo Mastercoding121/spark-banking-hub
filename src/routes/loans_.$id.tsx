@@ -1,7 +1,8 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import {
   getLoanStatus,
@@ -28,9 +29,17 @@ const STEP_LABEL: Record<LoanStatus, string> = {
 };
 
 function LoanDetailPage() {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const { id } = useParams({ from: "/loans_/$id" });
   const referenceId = id.toUpperCase();
   const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
   const fetchStatus = useServerFn(getLoanStatus);
   const uploadDoc = useServerFn(uploadLoanDocument);
   const addNote = useServerFn(addUnderwritingNote);

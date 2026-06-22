@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth";
 import { BankShell } from "@/components/BankShell";
 import { holderStore, useHolder } from "@/lib/store";
 import { authStore } from "@/lib/auth";
@@ -85,8 +86,15 @@ type ModalType = "name" | "password" | "pin" | "biometrics" | "notifications" | 
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 function ProfilePage() {
+  const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
   const holder = useHolder();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [isLoggedIn, navigate]);
   const currentUser = authStore.current();
   const { pin, biometrics } = useSecurity();
 
