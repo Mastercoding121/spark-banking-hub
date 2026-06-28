@@ -13,5 +13,13 @@ export default defineConfig({
       port: 5000,
       allowedHosts: true,
     },
+    optimizeDeps: {
+      exclude: ["#tanstack-router-entry", "#tanstack-start-entry", "tanstack-start-manifest:v"],
+    },
+    build: {
+      rollupOptions: {
+        external: ["#tanstack-router-entry", "#tanstack-start-entry", "tanstack-start-manifest:v"],
+      },
+    },
   },
 });

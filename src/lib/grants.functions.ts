@@ -1,19 +1,6 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/start-server-core";
-import { db } from "./firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-} from "firebase/firestore";
 import { getSessionUser } from "./user.functions";
 
 const SESSION_COOKIE = "fnx_session";
@@ -39,6 +26,20 @@ export type GrantApplication = {
   createdAt: string;
 };
 
+const inMemoryStorage = {
+  grants: new Map(),
+  applications: new Map(),
+};
+
+// Seed some sample grants
+if (inMemoryStorage.grants.size === 0) {
+  const sampleGrants: Grant[] = [
+    { id: "1", title: "Small Business Startup Grant", description: "For new entrepreneurs", amount: 10000, eligibilityText: "Must have business plan", deadline: null, status: "active", createdAt: new Date().toISOString() },
+    { id: "2", title: "Community Impact Grant", description: "For local nonprofits", amount: 5000, eligibilityText: "Must be 501(c)(3)", deadline: null, status: "active", createdAt: new Date().toISOString() },
+  ];
+  sampleGrants.forEach(g => inMemoryStorage.grants.set(g.id, g));
+}
+
 async function requireSession(): Promise<string> {
   const sid = getCookie(SESSION_COOKIE);
   if (!sid) throw new Error("Please sign in to apply for grants.");
@@ -47,112 +48,56 @@ async function requireSession(): Promise<string> {
   return user.id;
 }
 
-// ─── getPublicGrants ──────────────────────────────────────────────────────────
+// ─── getPublicGrants ─────────────────────────────────────────────────────────────
 export const getPublicGrants = createServerFn({ method: "GET" }).handler(async (): Promise<Grant[]> => {
-  try {
-    const grantsQuery = query(
-      collection(db, "grants"),
-      where("status", "==", "active"),
-      orderBy("createdAt", "desc")
-    );
-    const grantsSnap = await getDocs(grantsQuery);
-    return grantsSnap.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        title: data.title,
-        description: data.description,
-        amount: Number(data.amount),
-        eligibilityText: data.eligibilityText || null,
-        deadline: data.deadline || null,
-        status: data.status as Grant["status"],
-        createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-      };
-    });
-  } catch {
-    return [];
-  }
+  return Array.from(inMemoryStorage.grants.values()).filter(g => g.status === "active");
 });
 
 // ─── applyForGrant ────────────────────────────────────────────────────────────
 export const applyForGrant = createServerFn({ method: "POST" })
   .validator((input: { grantId: string; purpose: string; amountRequested: number }) => {
-    if (!input.grantId) throw new Error("Grant ID required.");
+    if (!input.grantId) throw new Error("Grant ID required");
     if (!input.purpose?.trim() || input.purpose.trim().length < 20)
       throw new Error("Please describe your purpose (at least 20 characters)");
     if (!input.amountRequested || input.amountRequested <= 0)
-      throw new Error("Amount must be greater than 0.");
+      throw new Error("Amount must be greater than 0");
     return { ...input, purpose: input.purpose.trim() };
   })
   .handler(async ({ data }) => {
     const userId = await requireSession();
+    const grant = inMemoryStorage.grants.get(data.grantId);
+    if (!grant) throw new Error("Grant not found");
+    if (grant.status !== "active") throw new Error("This grant is not currently accepting applications");
+    if (data.amountRequested > grant.amount) throw new Error(`Amount cannot exceed $${grant.amount.toLocaleString()}`);
 
-    // Check grant exists and is active
-    const grantDocRef = doc(db, "grants", data.grantId);
-    const grantSnap = await getDoc(grantDocRef);
-    if (!grantSnap.exists()) throw new Error("Grant not found.");
-    const grantData = grantSnap.data();
-    if (grantData.status !== "active")
-      throw new Error("This grant is not currently accepting applications.");
+    // Check existing applications
+    const existing = Array.from(inMemoryStorage.applications.values()).find(a => a.grantId === data.grantId && a.userId === userId);
+    if (existing) throw new Error("You have already applied for this grant");
 
-    const maxAmount = Number(grantData.amount);
-    if (data.amountRequested > maxAmount)
-      throw new Error(`Amount cannot exceed $${maxAmount.toLocaleString()}.`);
-
-    // Check no existing application
-    const existingQuery = query(
-      collection(db, "grantApplications"),
-      where("grantId", "==", data.grantId),
-      where("userId", "==", userId)
-    );
-    const existingSnap = await getDocs(existingQuery);
-    if (!existingSnap.empty)
-      throw new Error("You have already applied for this grant.");
-
-    // Create application
-    await addDoc(collection(db, "grantApplications"), {
+    const applicationId = crypto.randomUUID();
+    const newApp: GrantApplication & { userId: string } = {
+      id: applicationId,
       grantId: data.grantId,
       userId,
       purpose: data.purpose,
       amountRequested: data.amountRequested,
       status: "pending",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      createdAt: new Date().toISOString(),
+      grantTitle: grant.title,
+    };
+    inMemoryStorage.applications.set(applicationId, newApp);
 
-    return { ok: true, message: "Your application has been submitted and is under review." };
+    return { ok: true, message: "Your application has been submitted and is under review" };
   });
 
 // ─── getMyGrantApplications ───────────────────────────────────────────────────
 export const getMyGrantApplications = createServerFn({ method: "GET" }).handler(
   async (): Promise<GrantApplication[]> => {
-    try {
-      const userId = await requireSession();
-      const appsQuery = query(
-        collection(db, "grantApplications"),
-        where("userId", "==", userId),
-        orderBy("createdAt", "desc")
-      );
-      const appsSnap = await getDocs(appsQuery);
-      const results: GrantApplication[] = [];
-      for (const appDoc of appsSnap.docs) {
-        const appData = appDoc.data();
-        const grantDoc = await getDoc(doc(db, "grants", appData.grantId));
-        const grantTitle = grantDoc.exists() ? grantDoc.data().title : "";
-        results.push({
-          id: appDoc.id,
-          grantId: appData.grantId,
-          grantTitle,
-          purpose: appData.purpose,
-          amountRequested: Number(appData.amountRequested),
-          status: appData.status as GrantApplication["status"],
-          createdAt: appData.createdAt?.toDate().toISOString() || new Date().toISOString(),
-        });
-      }
-      return results;
-    } catch {
-      return [];
-    }
+    const userId = await requireSession();
+    const userApps = Array.from(inMemoryStorage.applications.values()).filter(a => a.userId === userId);
+    return userApps.map(app => ({
+      ...app,
+      grantTitle: inMemoryStorage.grants.get(app.grantId)?.title || "",
+    }));
   }
 );
-

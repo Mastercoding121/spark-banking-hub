@@ -1,22 +1,6 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/start-server-core";
-import { db } from "./firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  addDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  serverTimestamp,
-} from "firebase/firestore";
 import { getSessionUser } from "./user.functions";
 
 const SESSION_COOKIE = "fnx_session";
@@ -104,26 +88,18 @@ export const getStockQuotes = createServerFn({ method: "GET" })
     return { quotes: results.filter(Boolean) as StockQuote[], updatedAt: new Date().toISOString() };
   });
 
+// In-memory storage
+const inMemoryStorage = {
+  positions: new Map(),
+  loans: new Map(),
+};
+
 // ─── Portfolio ─────────────────────────────────────────────────────────────────
 
 export const getPortfolio = createServerFn({ method: "GET" }).handler(async (): Promise<Position[]> => {
   const userId = await requireSession();
-  const positionsQuery = query(
-    collection(db, "investmentPositions"),
-    where("userId", "==", userId),
-    where("shares", ">", 0),
-    orderBy("symbol")
-  );
-  const positionsSnap = await getDocs(positionsQuery);
-  return positionsSnap.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      symbol: data.symbol,
-      shares: Number(data.shares),
-      avgCost: Number(data.avgCost),
-      totalInvested: Number(data.totalInvested),
-    };
-  });
+  return Array.from(inMemoryStorage.positions.values())
+    .filter(p => p.userId === userId);
 });
 
 // ─── Submit investment order (DB-backed, balance-checked) ──────────────────────
@@ -144,65 +120,33 @@ export const submitInvestmentOrder = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireSession();
     const total = Math.round(data.shares * data.pricePerShare * 100) / 100;
-    const now = new Date().toISOString().split("T")[0];
     const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
 
     if (data.side === "buy") {
-      const accountRef = doc(db, "accounts", `${userId}_checking`);
-      const accountSnap = await getDoc(accountRef);
-      if (!accountSnap.exists()) throw new Error("Checking account not found.");
-      const currentBalance = Number(accountSnap.data().balance || 0);
-      if (currentBalance < total)
-        throw new Error(
-          `Insufficient funds. Available: $${currentBalance.toFixed(2)}, needed: $${total.toFixed(2)}.`
-        );
-
-      await updateDoc(accountRef, {
-        balance: currentBalance - total,
-        updatedAt: serverTimestamp(),
-      });
-
-      // Update or create position
-      const positionQuery = query(
-        collection(db, "investmentPositions"),
-        where("userId", "==", userId),
-        where("symbol", "==", data.symbol)
-      );
-      const positionSnap = await getDocs(positionQuery);
-      if (!positionSnap.empty) {
-        const existingDoc = positionSnap.docs[0];
-        const existingData = existingDoc.data();
-        const newShares = Number(existingData.shares) + data.shares;
-        const newTotalInvested = Number(existingData.totalInvested) + total;
+      // Find or create position
+      const positions = Array.from(inMemoryStorage.positions.values()).filter(p => p.userId === userId && p.symbol === data.symbol);
+      if (positions.length > 0) {
+        const existing = positions[0];
+        const newShares = existing.shares + data.shares;
+        const newTotalInvested = existing.totalInvested + total;
         const newAvgCost = newTotalInvested / newShares;
-        await updateDoc(existingDoc.ref, {
+        inMemoryStorage.positions.set(existing.id, {
+          ...existing,
           shares: newShares,
           totalInvested: newTotalInvested,
           avgCost: newAvgCost,
-          updatedAt: serverTimestamp(),
         });
       } else {
-        await addDoc(collection(db, "investmentPositions"), {
+        const positionId = crypto.randomUUID();
+        inMemoryStorage.positions.set(positionId, {
+          id: positionId,
           userId,
           symbol: data.symbol,
           shares: data.shares,
           avgCost: data.pricePerShare,
           totalInvested: total,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
         });
       }
-
-      await addDoc(collection(db, "transactions"), {
-        userId,
-        accountType: "checking",
-        date: now,
-        description: `Investment: Bought ${data.shares} ${data.symbol} @ $${data.pricePerShare.toFixed(2)}`,
-        category: "Transfer",
-        amount: -total,
-        createdAt: serverTimestamp(),
-      });
-
       return {
         ok: true,
         orderId,
@@ -213,56 +157,26 @@ export const submitInvestmentOrder = createServerFn({ method: "POST" })
         message: `Bought ${data.shares} share${data.shares !== 1 ? "s" : ""} of ${data.symbol} for $${total.toFixed(2)}.`,
       };
     } else {
-      const positionQuery = query(
-        collection(db, "investmentPositions"),
-        where("userId", "==", userId),
-        where("symbol", "==", data.symbol)
-      );
-      const positionSnap = await getDocs(positionQuery);
-      if (positionSnap.empty) throw new Error(`You hold 0 ${data.symbol}.`);
+      const positions = Array.from(inMemoryStorage.positions.values()).filter(p => p.userId === userId && p.symbol === data.symbol);
+      if (positions.length === 0) throw new Error(`You hold 0 ${data.symbol}`);
+      
+      const existing = positions[0];
+      if (existing.shares < data.shares) throw new Error(`Insufficient shares. You hold ${existing.shares.toFixed(4)} ${data.symbol}.`);
 
-      const posDoc = positionSnap.docs[0];
-      const posData = posDoc.data();
-      if (Number(posData.shares) < data.shares)
-        throw new Error(`Insufficient shares. You hold ${Number(posData.shares).toFixed(4)} ${data.symbol}.`);
-
-      const costBasisSold = Number(posData.avgCost) * data.shares;
-
-      const accountRef = doc(db, "accounts", `${userId}_checking`);
-      const accountSnap = await getDoc(accountRef);
-      if (accountSnap.exists()) {
-        const currentBalance = Number(accountSnap.data().balance || 0);
-        await updateDoc(accountRef, {
-          balance: currentBalance + total,
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      const newShares = Number(posData.shares) - data.shares;
-      const newTotalInvested = Math.max(0, Number(posData.totalInvested) - costBasisSold);
-
+      const newShares = existing.shares - data.shares;
       if (newShares <= 0.000001) {
-        await deleteDoc(posDoc.ref);
+        inMemoryStorage.positions.delete(existing.id);
       } else {
+        const newTotalInvested = Math.max(0, existing.totalInvested - (existing.avgCost * data.shares));
         const newAvgCost = newTotalInvested / newShares;
-        await updateDoc(posDoc.ref, {
+        inMemoryStorage.positions.set(existing.id, {
+          ...existing,
           shares: newShares,
           totalInvested: newTotalInvested,
           avgCost: newAvgCost,
-          updatedAt: serverTimestamp(),
         });
       }
-
-      await addDoc(collection(db, "transactions"), {
-        userId,
-        accountType: "checking",
-        date: now,
-        description: `Investment: Sold ${data.shares} ${data.symbol} @ $${data.pricePerShare.toFixed(2)}`,
-        category: "Transfer",
-        amount: total,
-        createdAt: serverTimestamp(),
-      });
-
+      
       return {
         ok: true,
         orderId,
@@ -309,7 +223,7 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
     const history = [{ status: "submitted", at: now, note: `Application received for ${data.fullName}. Confirmation sent to ${data.email}.` }];
     const notes = [{ id: `un-${Date.now()}`, at: now, author: "system", text: "Application intake complete. Forwarded to underwriting queue." }];
 
-    await addDoc(collection(db, "loanApplications"), {
+    const newLoan: LoanApplication = {
       referenceId,
       productId: data.productId,
       amount: data.amount,
@@ -317,14 +231,12 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
       fullName: data.fullName,
       email: data.email,
       status: "submitted",
+      submittedAt: now,
       history,
-      underwritingNotes: notes,
       documents: [],
-      submittedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
+      underwritingNotes: notes,
+    };
+    inMemoryStorage.loans.set(referenceId, newLoan);
     return { ok: true, referenceId, message: `Application received. Track status with reference ${referenceId}.` };
   });
 
@@ -337,15 +249,9 @@ export const uploadLoanDocument = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data }) => {
-    const loanQuery = query(
-      collection(db, "loanApplications"),
-      where("referenceId", "==", data.referenceId.trim().toUpperCase())
-    );
-    const loanSnap = await getDocs(loanQuery);
-    if (loanSnap.empty) throw new Error("Application not found");
-    const loanDoc = loanSnap.docs[0];
-    const loanData = loanDoc.data();
-
+    const loan = inMemoryStorage.loans.get(data.referenceId.trim().toUpperCase());
+    if (!loan) throw new Error("Application not found");
+    
     const docEntry: LoanDocument = {
       id: `doc-${Date.now().toString(36).toUpperCase()}`,
       name: data.name,
@@ -353,16 +259,18 @@ export const uploadLoanDocument = createServerFn({ method: "POST" })
       contentType: data.contentType || "application/octet-stream",
       uploadedAt: new Date().toISOString(),
     };
-    const newDocs = [...(loanData.documents || []), docEntry];
-    const newNote = { id: `un-${Date.now()}`, at: new Date().toISOString(), author: "system", text: `Document received: ${docEntry.name} (${Math.round(docEntry.sizeBytes / 1024)} KB).` };
-    const newNotes = [...(loanData.underwritingNotes || []), newNote];
-
-    await updateDoc(loanDoc.ref, {
-      documents: newDocs,
-      underwritingNotes: newNotes,
-      updatedAt: serverTimestamp(),
+    
+    inMemoryStorage.loans.set(data.referenceId.trim().toUpperCase(), {
+      ...loan,
+      documents: [...loan.documents, docEntry],
+      underwritingNotes: [...loan.underwritingNotes, {
+        id: `un-${Date.now()}`,
+        at: new Date().toISOString(),
+        author: "system",
+        text: `Document received: ${docEntry.name} (${Math.round(docEntry.sizeBytes / 1024)} KB)`,
+      }],
     });
-
+    
     return { ok: true, document: docEntry };
   });
 
@@ -374,28 +282,21 @@ export const addUnderwritingNote = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data }) => {
-    const loanQuery = query(
-      collection(db, "loanApplications"),
-      where("referenceId", "==", data.referenceId.trim().toUpperCase())
-    );
-    const loanSnap = await getDocs(loanQuery);
-    if (loanSnap.empty) throw new Error("Application not found");
-    const loanDoc = loanSnap.docs[0];
-    const loanData = loanDoc.data();
-
+    const loan = inMemoryStorage.loans.get(data.referenceId.trim().toUpperCase());
+    if (!loan) throw new Error("Application not found");
+    
     const noteEntry: UnderwritingNote = {
       id: `un-${Date.now()}`,
       at: new Date().toISOString(),
       author: "applicant",
       text: data.text.trim(),
     };
-    const newNotes = [...(loanData.underwritingNotes || []), noteEntry];
-
-    await updateDoc(loanDoc.ref, {
-      underwritingNotes: newNotes,
-      updatedAt: serverTimestamp(),
+    
+    inMemoryStorage.loans.set(data.referenceId.trim().toUpperCase(), {
+      ...loan,
+      underwritingNotes: [...loan.underwritingNotes, noteEntry],
     });
-
+    
     return { ok: true, note: noteEntry };
   });
 
@@ -406,30 +307,11 @@ export const getLoanStatus = createServerFn({ method: "GET" })
   })
   .handler(
     async ({ data }): Promise<{ application: LoanApplication } | { error: string }> => {
-      const loanQuery = query(
-        collection(db, "loanApplications"),
-        where("referenceId", "==", data.referenceId.trim().toUpperCase())
-      );
-      const loanSnap = await getDocs(loanQuery);
-      if (loanSnap.empty)
+      const loan = inMemoryStorage.loans.get(data.referenceId.trim().toUpperCase());
+      if (!loan) {
         return { error: "Application not found. Check your reference number." };
-
-      const loanData = loanSnap.docs[0].data();
-      return {
-        application: {
-          referenceId: loanData.referenceId,
-          productId: loanData.productId,
-          amount: Number(loanData.amount),
-          termMonths: loanData.termMonths,
-          fullName: loanData.fullName,
-          email: loanData.email,
-          status: loanData.status as LoanStatus,
-          submittedAt: loanData.submittedAt?.toDate().toISOString() || new Date().toISOString(),
-          history: loanData.history || [],
-          documents: loanData.documents || [],
-          underwritingNotes: loanData.underwritingNotes || [],
-        },
-      };
+      }
+      return { application: loan };
     }
   );
 
@@ -498,4 +380,3 @@ export const initiateApplePay = createServerFn({ method: "POST" })
     const sessionId = `APAY-${Date.now().toString(36).toUpperCase()}`;
     return { ok: true, sessionId, merchant: data.merchant || "FinextHub Bank Merchant", amount: data.amount, message: `Apple Pay session initiated. Confirm with Face ID on your device.` };
   });
-

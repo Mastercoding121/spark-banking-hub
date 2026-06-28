@@ -1,23 +1,13 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/start-server-core";
-import { db } from "./firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-} from "firebase/firestore";
 import { getSessionUser } from "./user.functions";
 
 const SESSION_COOKIE = "fnx_session";
+
+// In-memory storage for demo
+const tickets = new Map();
+const messages = new Map();
 
 async function getSessionUserId(): Promise<{ userId: string; name: string; email: string } | null> {
   const sid = getCookie(SESSION_COOKIE);
@@ -29,29 +19,30 @@ async function getSessionUserId(): Promise<{ userId: string; name: string; email
 export const getOrCreateTicket = createServerFn({ method: "POST" })
   .validator((input: { ticketId?: string; name?: string; email?: string; topic?: string }) => input)
   .handler(async ({ data }) => {
-    // Verify existing ticket
-    if (data.ticketId) {
-      const ticketDoc = await getDoc(doc(db, "supportTickets", data.ticketId));
-      if (ticketDoc.exists()) return { ticketId: ticketDoc.id };
+    if (data.ticketId && tickets.has(data.ticketId)) {
+      return { ticketId: data.ticketId };
     }
 
-    // Get session user info if logged in
     const sessionUser = await getSessionUserId();
     const userId = sessionUser?.id || null;
     const name = sessionUser?.name || data.name || "Guest";
     const email = sessionUser?.email || data.email || null;
 
-    const ticketDocRef = await addDoc(collection(db, "supportTickets"), {
+    const ticketId = crypto.randomUUID();
+    const newTicket = {
+      id: ticketId,
       userId,
       name,
       email,
       topic: data.topic || "General",
       status: "open",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    tickets.set(ticketId, newTicket);
+    messages.set(ticketId, []);
 
-    return { ticketId: ticketDocRef.id };
+    return { ticketId };
   });
 
 // ─── sendSupportMessage ───────────────────────────────────────────────────────
@@ -63,19 +54,27 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
     return { ...input, content: input.content.trim() };
   })
   .handler(async ({ data }) => {
-    await addDoc(collection(db, "supportMessages"), {
+    if (!tickets.has(data.ticketId)) {
+      throw new Error("Ticket not found");
+    }
+    const ticketMsgList = messages.get(data.ticketId) || [];
+    const newMsg = {
+      id: crypto.randomUUID(),
       ticketId: data.ticketId,
-      senderRole: data.senderRole,
+      role: data.senderRole,
       content: data.content,
-      createdAt: serverTimestamp(),
-    });
-    await updateDoc(doc(db, "supportTickets", data.ticketId), {
-      updatedAt: serverTimestamp(),
-    });
+      at: new Date().toISOString(),
+    };
+    ticketMsgList.push(newMsg);
+    messages.set(data.ticketId, ticketMsgList);
+    // Update ticket's updatedAt
+    const ticket = tickets.get(data.ticketId);
+    if (ticket) {
+      tickets.set(data.ticketId, { ...ticket, updatedAt: new Date().toISOString() });
+    }
     return { ok: true };
   });
 
-// ─── getTicketMessages ────────────────────────────────────────────────────────
 // ─── submitSupportMessage ───────────────────────────────────────────────────
 export const submitSupportMessage = createServerFn({ method: "POST" })
   .validator((input: { name: string; email: string; topic: string; message: string }) => {
@@ -85,22 +84,29 @@ export const submitSupportMessage = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data }) => {
-    const ticketDocRef = await addDoc(collection(db, "supportTickets"), {
+    const ticketId = crypto.randomUUID();
+    const newTicket = {
+      id: ticketId,
       userId: null,
       name: data.name,
       email: data.email,
       topic: data.topic,
       status: "open",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    await addDoc(collection(db, "supportMessages"), {
-      ticketId: ticketDocRef.id,
-      senderRole: "user",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    tickets.set(ticketId, newTicket);
+
+    const initialMsg = {
+      id: crypto.randomUUID(),
+      ticketId: ticketId,
+      role: "user",
       content: data.message,
-      createdAt: serverTimestamp(),
-    });
-    return { ok: true, message: `Ticket ${ticketDocRef.id} opened successfully` };
+      at: new Date().toISOString(),
+    };
+    messages.set(ticketId, [initialMsg]);
+
+    return { ok: true, message: `Ticket ${ticketId} opened successfully` };
   });
 
 export const getTicketMessages = createServerFn({ method: "GET" })
@@ -109,20 +115,10 @@ export const getTicketMessages = createServerFn({ method: "GET" })
     return input;
   })
   .handler(async ({ data }) => {
-    let messagesQuery = query(
-      collection(db, "supportMessages"),
-      where("ticketId", "==", data.ticketId),
-      orderBy("createdAt", "asc")
-    );
-    const messagesSnap = await getDocs(messagesQuery);
-    return messagesSnap.docs.map((doc) => {
-      const msgData = doc.data();
-      return {
-        id: doc.id,
-        role: msgData.senderRole as "user" | "bot" | "admin",
-        content: msgData.content,
-        at: msgData.createdAt?.toDate().toISOString() || new Date().toISOString(),
-      };
-    });
+    const msgList = messages.get(data.ticketId) || [];
+    if (data.since) {
+      const sinceDate = new Date(data.since);
+      return msgList.filter((msg) => new Date(msg.at) > sinceDate);
+    }
+    return msgList;
   });
-
