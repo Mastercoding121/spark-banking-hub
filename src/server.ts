@@ -50,6 +50,17 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     console.log("[server] Incoming request:", request.method, request.url);
+    const url = new URL(request.url);
+
+    // Direct health check route to bypass all other handlers
+    if (url.pathname === "/health") {
+      console.log("[server] Direct health check!");
+      return new Response("OK", {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+      });
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

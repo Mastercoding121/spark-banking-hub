@@ -5,14 +5,31 @@ let lastCapturedError: { error: unknown; at: number } | undefined;
 const TTL_MS = 5_000;
 
 function record(error: unknown) {
+  console.error("[error-capture] Recorded error:", error);
+  if (error instanceof Error) {
+    console.error("[error-capture] Error stack:", error.stack);
+  }
   lastCapturedError = { error, at: Date.now() };
 }
 
+// Browser listeners
 if (typeof globalThis.addEventListener === "function") {
   globalThis.addEventListener("error", (event) => record((event as ErrorEvent).error ?? event));
   globalThis.addEventListener("unhandledrejection", (event) =>
     record((event as PromiseRejectionEvent).reason),
   );
+}
+
+// Node.js listeners (for Vercel/Nitro server)
+if (typeof process !== "undefined") {
+  process.on("uncaughtException", (error) => {
+    console.error("[error-capture] Uncaught Exception:", error);
+    record(error);
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[error-capture] Unhandled Rejection:", reason);
+    record(reason);
+  });
 }
 
 export function consumeLastCapturedError(): unknown {
