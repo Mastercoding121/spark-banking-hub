@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as VerifyRouteImport } from './routes/verify'
+import { Route as TestRouteImport } from './routes/test'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -44,6 +45,11 @@ const WalletRoute = WalletRouteImport.update({
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
   path: '/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestRoute = TestRouteImport.update({
+  id: '/test',
+  path: '/test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/features': typeof AdminFeaturesRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/features': typeof AdminFeaturesRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/features': typeof AdminFeaturesRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/terms'
+    | '/test'
     | '/verify'
     | '/wallet'
     | '/admin/features'
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/terms'
+    | '/test'
     | '/verify'
     | '/wallet'
     | '/admin/features'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/terms'
+    | '/test'
     | '/verify'
     | '/wallet'
     | '/admin/features'
@@ -353,6 +365,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
+  TestRoute: typeof TestRoute
   VerifyRoute: typeof VerifyRoute
   WalletRoute: typeof WalletRoute
   LoansIdRoute: typeof LoansIdRoute
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       path: '/verify'
       fullPath: '/verify'
       preLoaderRoute: typeof VerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test': {
+      id: '/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof TestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -597,6 +617,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
+  TestRoute: TestRoute,
   VerifyRoute: VerifyRoute,
   WalletRoute: WalletRoute,
   LoansIdRoute: LoansIdRoute,
