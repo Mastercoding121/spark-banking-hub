@@ -60,6 +60,19 @@ export const ACCOUNT_DETAILS = {
   savings: { name: "FinextHub Growth Savings", type: "High-Yield Savings", apy: "4.25%" },
 };
 
+// Helper to ensure we have db
+const getDb = () => {
+  if (!db) {
+    console.warn("Firebase Firestore not initialized! Using in-memory fallback.");
+    return { 
+      inMemory: true, 
+      accounts: new Map(),
+      transactions: new Map()
+    };
+  }
+  return db;
+};
+
 async function requireSession(): Promise<string> {
   const sid = getCookie(SESSION_COOKIE);
   if (!sid) throw new Error("Not authenticated.");
@@ -71,7 +84,23 @@ async function requireSession(): Promise<string> {
 // ─── getAccounts ──────────────────────────────────────────────────────────────
 export const getAccounts = createServerFn({ method: "GET" }).handler(async (): Promise<Account[]> => {
   const userId = await requireSession();
-  const accountsQuery = query(collection(db, "accounts"), where("userId", "==", userId), orderBy("type"));
+  const currentDb = getDb();
+  
+  if ("inMemory" in currentDb) {
+    // In-memory demo data: return default checking and savings if not exists
+    if (!currentDb.accounts.has(`${userId}_checking`)) {
+      currentDb.accounts.set(`${userId}_checking`, { userId, type: "checking", balance: 0, createdAt: new Date() });
+    }
+    if (!currentDb.accounts.has(`${userId}_savings`)) {
+      currentDb.accounts.set(`${userId}_savings`, { userId, type: "savings", balance: 0, createdAt: new Date() });
+    }
+    return Array.from(currentDb.accounts.values())
+      .filter(acc => acc.userId === userId)
+      .sort((a, b) => a.type.localeCompare(b.type))
+      .map(acc => ({ type: acc.type, balance: Number(acc.balance) }));
+  }
+
+  const accountsQuery = query(collection(currentDb, "accounts"), where("userId", "==", userId), orderBy("type"));
   const accountsSnap = await getDocs(accountsQuery);
   return accountsSnap.docs.map((doc) => ({
     type: doc.data().type,
@@ -82,8 +111,28 @@ export const getAccounts = createServerFn({ method: "GET" }).handler(async (): P
 // ─── getTransactions ──────────────────────────────────────────────────────────
 export const getTransactions = createServerFn({ method: "GET" }).handler(async (): Promise<Transaction[]> => {
   const userId = await requireSession();
+  const currentDb = getDb();
+
+  if ("inMemory" in currentDb) {
+    return Array.from(currentDb.transactions.values())
+      .filter(tx => tx.userId === userId)
+      .sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
+      })
+      .map(tx => ({
+        id: tx.id,
+        accountType: tx.accountType,
+        date: tx.date,
+        description: tx.description,
+        category: tx.category,
+        amount: Number(tx.amount),
+        createdAt: tx.createdAt?.toISOString() || new Date().toISOString(),
+      }));
+  }
+
   const txQuery = query(
-    collection(db, "transactions"),
+    collection(currentDb, "transactions"),
     where("userId", "==", userId),
     orderBy("date", "desc"),
     orderBy("createdAt", "desc")
@@ -125,9 +174,39 @@ export const addTransaction = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }): Promise<Transaction> => {
     const userId = await requireSession();
+    const currentDb = getDb();
+    const accountId = `${userId}_${data.accountType}`;
+
+    if ("inMemory" in currentDb) {
+      // In-memory logic
+      if (!currentDb.accounts.has(accountId)) {
+        currentDb.accounts.set(accountId, { userId, type: data.accountType, balance: 0, createdAt: new Date() });
+      }
+      const account = currentDb.accounts.get(accountId)!;
+      account.balance = Number(account.balance) + data.amount;
+      account.updatedAt = new Date();
+
+      const txId = crypto.randomUUID();
+      const tx = {
+        id: txId,
+        userId,
+        accountType: data.accountType,
+        date: data.date,
+        description: data.description,
+        category: data.category,
+        amount: data.amount,
+        createdAt: new Date(),
+      };
+      currentDb.transactions.set(txId, tx);
+
+      return {
+        ...tx,
+        createdAt: tx.createdAt.toISOString(),
+      };
+    }
 
     // Adjust account balance
-    const accountDocRef = doc(db, "accounts", `${userId}_${data.accountType}`);
+    const accountDocRef = doc(currentDb, "accounts", accountId);
     const accountSnap = await getDoc(accountDocRef);
     if (!accountSnap.exists()) throw new Error("Account not found.");
     const currentBalance = Number(accountSnap.data().balance || 0);
@@ -137,7 +216,7 @@ export const addTransaction = createServerFn({ method: "POST" })
     });
 
     // Create transaction
-    const txDocRef = await addDoc(collection(db, "transactions"), {
+    const txDocRef = await addDoc(collection(currentDb, "transactions"), {
       userId,
       accountType: data.accountType,
       date: data.date,
@@ -167,16 +246,34 @@ export const deleteTransaction = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const userId = await requireSession();
+    const currentDb = getDb();
+
+    if ("inMemory" in currentDb) {
+      const tx = currentDb.transactions.get(data.transactionId);
+      if (!tx) throw new Error("Transaction not found.");
+      if (tx.userId !== userId) throw new Error("Not authorized.");
+
+      // Reverse balance effect
+      const accountId = `${userId}_${tx.accountType}`;
+      const account = currentDb.accounts.get(accountId);
+      if (account) {
+        account.balance = Number(account.balance) - Number(tx.amount);
+        account.updatedAt = new Date();
+      }
+
+      currentDb.transactions.delete(data.transactionId);
+      return { ok: true };
+    }
 
     // Get transaction
-    const txDocRef = doc(db, "transactions", data.transactionId);
+    const txDocRef = doc(currentDb, "transactions", data.transactionId);
     const txSnap = await getDoc(txDocRef);
     if (!txSnap.exists()) throw new Error("Transaction not found.");
     const txData = txSnap.data();
     if (txData.userId !== userId) throw new Error("Not authorized.");
 
     // Reverse balance effect
-    const accountDocRef = doc(db, "accounts", `${userId}_${txData.accountType}`);
+    const accountDocRef = doc(currentDb, "accounts", `${userId}_${txData.accountType}`);
     const accountSnap = await getDoc(accountDocRef);
     if (accountSnap.exists()) {
       const currentBalance = Number(accountSnap.data().balance || 0);
@@ -206,9 +303,63 @@ export const transferBetweenAccounts = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireSession();
     const now = new Date().toISOString().split("T")[0];
+    const currentDb = getDb();
+    const fromAccountId = `${userId}_${data.fromAccount}`;
+    const toAccountId = `${userId}_${data.toAccount}`;
+
+    if ("inMemory" in currentDb) {
+      // In-memory logic
+      const fromAccount = currentDb.accounts.get(fromAccountId);
+      if (!fromAccount) throw new Error(`${data.fromAccount} account not found.`);
+      const fromBalance = Number(fromAccount.balance);
+      if (fromBalance < data.amount) throw new Error("Insufficient funds.");
+
+      // Update both accounts
+      fromAccount.balance = fromBalance - data.amount;
+      fromAccount.updatedAt = new Date();
+
+      const toAccount = currentDb.accounts.get(toAccountId);
+      if (toAccount) {
+        toAccount.balance = Number(toAccount.balance) + data.amount;
+        toAccount.updatedAt = new Date();
+      }
+
+      // Create transactions
+      const debitTxId = crypto.randomUUID();
+      const debitTx = {
+        id: debitTxId,
+        userId,
+        accountType: data.fromAccount,
+        date: now,
+        description: `Transfer to ${data.toAccount} account`,
+        category: "Transfer",
+        amount: -data.amount,
+        createdAt: new Date(),
+      };
+      currentDb.transactions.set(debitTxId, debitTx);
+
+      const creditTxId = crypto.randomUUID();
+      const creditTx = {
+        id: creditTxId,
+        userId,
+        accountType: data.toAccount,
+        date: now,
+        description: `Transfer from ${data.fromAccount} account`,
+        category: "Transfer",
+        amount: data.amount,
+        createdAt: new Date(),
+      };
+      currentDb.transactions.set(creditTxId, creditTx);
+
+      return {
+        ok: true,
+        reference: `TRF-${Date.now().toString(36).toUpperCase()}`,
+        debit: { ...debitTx, createdAt: debitTx.createdAt.toISOString() },
+      };
+    }
 
     // Get source account
-    const fromAccountRef = doc(db, "accounts", `${userId}_${data.fromAccount}`);
+    const fromAccountRef = doc(currentDb, "accounts", fromAccountId);
     const fromSnap = await getDoc(fromAccountRef);
     if (!fromSnap.exists()) throw new Error(`${data.fromAccount} account not found.`);
     const fromBalance = Number(fromSnap.data().balance || 0);
@@ -219,7 +370,7 @@ export const transferBetweenAccounts = createServerFn({ method: "POST" })
       balance: fromBalance - data.amount,
       updatedAt: serverTimestamp(),
     });
-    const toAccountRef = doc(db, "accounts", `${userId}_${data.toAccount}`);
+    const toAccountRef = doc(currentDb, "accounts", toAccountId);
     const toSnap = await getDoc(toAccountRef);
     if (toSnap.exists()) {
       const toBalance = Number(toSnap.data().balance || 0);
@@ -230,7 +381,7 @@ export const transferBetweenAccounts = createServerFn({ method: "POST" })
     }
 
     // Create transactions
-    const debitTxRef = await addDoc(collection(db, "transactions"), {
+    const debitTxRef = await addDoc(collection(currentDb, "transactions"), {
       userId,
       accountType: data.fromAccount,
       date: now,
@@ -239,7 +390,7 @@ export const transferBetweenAccounts = createServerFn({ method: "POST" })
       amount: -data.amount,
       createdAt: serverTimestamp(),
     });
-    await addDoc(collection(db, "transactions"), {
+    await addDoc(collection(currentDb, "transactions"), {
       userId,
       accountType: data.toAccount,
       date: now,
@@ -271,8 +422,39 @@ export const recordExternalTransfer = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireSession();
     const now = new Date().toISOString().split("T")[0];
+    const currentDb = getDb();
+    const accountId = `${userId}_checking`;
 
-    const accountRef = doc(db, "accounts", `${userId}_checking`);
+    if ("inMemory" in currentDb) {
+      const account = currentDb.accounts.get(accountId);
+      if (!account) throw new Error("Checking account not found.");
+      const currentBalance = Number(account.balance);
+      if (currentBalance < data.amount) throw new Error("Insufficient funds in checking account.");
+
+      account.balance = currentBalance - data.amount;
+      account.updatedAt = new Date();
+
+      const txId = crypto.randomUUID();
+      const tx = {
+        id: txId,
+        userId,
+        accountType: "checking",
+        date: now,
+        description: data.description,
+        category: "Transfer",
+        amount: -data.amount,
+        createdAt: new Date(),
+      };
+      currentDb.transactions.set(txId, tx);
+
+      return {
+        ok: true,
+        reference: `${data.method.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+        transactionId: txId,
+      };
+    }
+
+    const accountRef = doc(currentDb, "accounts", accountId);
     const accountSnap = await getDoc(accountRef);
     if (!accountSnap.exists()) throw new Error("Checking account not found.");
     const currentBalance = Number(accountSnap.data().balance || 0);
@@ -283,7 +465,7 @@ export const recordExternalTransfer = createServerFn({ method: "POST" })
       updatedAt: serverTimestamp(),
     });
 
-    const txRef = await addDoc(collection(db, "transactions"), {
+    const txRef = await addDoc(collection(currentDb, "transactions"), {
       userId,
       accountType: "checking",
       date: now,

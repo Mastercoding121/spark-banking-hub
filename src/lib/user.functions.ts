@@ -217,7 +217,7 @@ export const signUp = createServerFn({ method: "POST" })
     const sessionId = await createSession(userId);
     setCookie(SESSION_COOKIE, sessionId, {
       httpOnly: true,
-      secure: import.meta.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: SESSION_TTL_DAYS * 86400,
       path: "/",
@@ -262,7 +262,7 @@ export const signIn = createServerFn({ method: "POST" })
     const sessionId = await createSession(user.id);
     setCookie(SESSION_COOKIE, sessionId, {
       httpOnly: true,
-      secure: import.meta.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: SESSION_TTL_DAYS * 86400,
       path: "/",
