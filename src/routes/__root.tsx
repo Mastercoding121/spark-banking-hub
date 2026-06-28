@@ -7,12 +7,13 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { ClientOnly } from "@/components/ClientOnly";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { authStore, StoredUser, useAuth } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -74,7 +75,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+interface MyRouterContext {
+  queryClient: QueryClient;
+  auth: {
+    isAuthenticated: boolean;
+    user: StoredUser | null;
+    isAdmin: boolean;
+    isLoading: boolean;
+  };
+}
+
+export const Route = createRootRouteWithContext<MyRouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -129,13 +140,29 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { user, isLoggedIn } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Small delay to let localStorage hydration complete
+    const timer = setTimeout(() => setIsLoading(false), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Define the auth object we'll pass down
+  const auth = {
+    isAuthenticated: isLoggedIn,
+    user,
+    isAdmin: !!user?.isAdmin,
+    isLoading,
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <ClientOnly>
-        <Toaster />
+        <Toaster position="top-right" richColors closeButton />
       </ClientOnly>
     </QueryClientProvider>
   );

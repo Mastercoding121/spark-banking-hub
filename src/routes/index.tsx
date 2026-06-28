@@ -6,7 +6,6 @@ import { authStore, useAuth } from "@/lib/auth";
 import { signIn } from "@/lib/user.functions";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PublicLayout } from "@/components/PublicLayout";
-import { EnhancedLoadingScreen } from "@/components/EnhancedLoadingScreen";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,14 +33,15 @@ function Landing() {
       setIsRedirecting(true);
       const timer = setTimeout(() => {
         navigate({ to: "/dashboard" });
-      }, 2500); // 2.5 seconds
+      }, 2500);
       return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate, isRedirecting]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); setBusy(true);
+    setError(null);
+    setBusy(true);
     try {
       const user = await signInFn({ data: { email, password } });
       authStore.setUser(user);
@@ -53,10 +53,47 @@ function Landing() {
 
   if (isRedirecting) {
     return (
-      <EnhancedLoadingScreen
-        title="Redirecting to your dashboard…"
-        subtitle="Please wait while we prepare your account."
-      />
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-red-900">
+        {/* Ambient glows */}
+        <div className="absolute top-20 left-1/4 h-64 w-64 rounded-full bg-amber-500/20 blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-1/4 h-80 w-80 rounded-full bg-red-500/20 blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+        
+        {/* Particle system (simple CSS particles) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-amber-400/30"
+              style={{
+                width: `${Math.random() * 4 + 2}px`,
+                height: `${Math.random() * 4 + 2}px`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animation: `float ${Math.random() * 10 + 10}s linear infinite`,
+                animationDelay: `${Math.random() * 5}s`,
+                opacity: Math.random() * 0.5 + 0.2,
+              }}
+            />
+          ))}
+        </div>
+        
+        {/* Content container */}
+        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-8 text-center">
+          <LoadingSpinner size="xl" />
+          <h2 className="mt-6 text-3xl font-bold text-white">Redirecting to your dashboard…</h2>
+          <p className="mt-2 text-lg text-slate-300">Please wait while we prepare your account.</p>
+        </div>
+        
+        {/* Custom keyframes for floating particles */}
+        <style>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+            25% { transform: translateY(-20px) translateX(10px); opacity: 0.5; }
+            50% { transform: translateY(-40px) translateX(-5px); opacity: 0.3; }
+            75% { transform: translateY(-20px) translateX(-15px); opacity: 0.6; }
+          }
+        `}</style>
+      </div>
     );
   }
 
@@ -73,7 +110,7 @@ function Landing() {
             Your money,<br />
             <span className="bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">secured.</span>
           </h1>
-          <p className="mb-6 text-base text-white/70 leading-relaxed">
+          <p className="mb-6 text-base text-white/80 leading-relaxed">
             Real-time banking with zero monthly fees. Open your account in minutes — FDIC-insured up to $250,000.
           </p>
           <div className="flex flex-wrap gap-4 text-sm text-white/60">

@@ -1,0 +1,10 @@
+# Architectural & Workflow Standards
+
+## 1. Directory & File Structure
+- Keep a clean separation between routes, controllers/services, and database models.
+- All routing files must match their feature names (e.g., `user.routes.js` or `auth_routes.py`).
+
+## 2. Route & Function Generation Rules
+- Every route must have an accompanying input validation schema.
+- Functions must be structured asynchronously and include explicit try/catch error handling wrappers.
+- Do not generate placeholders like `// TODO: implement later`. Trae must output fully functional block code.
