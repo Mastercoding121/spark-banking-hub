@@ -28,14 +28,12 @@ let db: any = null;
 let analytics: any = null;
 
 try {
-  // Check if config has required fields before initializing
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    if (getApps().length === 0) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-      
-      // Only initialize auth and analytics on client
-      if (typeof window !== "undefined") {
+  // Only initialize Firebase Client SDK on the browser! NOT server!
+  if (typeof window !== "undefined") {
+    if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+      if (getApps().length === 0) {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
         auth = getAuth(app);
         
         isSupported().then((supported) => {
@@ -43,19 +41,15 @@ try {
             analytics = getAnalytics(app);
           }
         }).catch(() => { /* ignore analytics errors */ });
-      }
-    } else {
-      app = getApps()[0];
-      db = getFirestore(app);
-      
-      // Only initialize auth and analytics on client
-      if (typeof window !== "undefined") {
+      } else {
+        app = getApps()[0];
+        db = getFirestore(app);
         auth = getAuth(app);
       }
     }
   }
 } catch (error) {
-  console.warn("Firebase initialization failed", error);
+  console.warn("Firebase initialization failed:", error);
 }
 
 export { app, auth, db, analytics };
