@@ -16,6 +16,7 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as InvestmentsRouteImport } from './routes/investments'
 import { Route as GrantsRouteImport } from './routes/grants'
@@ -68,6 +69,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoansRoute = LoansRouteImport.update({
@@ -171,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   '/grants': typeof GrantsRoute
   '/investments': typeof InvestmentsRoute
   '/loans': typeof LoansRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/grants'
     | '/investments'
     | '/loans'
+    | '/login'
     | '/privacy'
     | '/profile'
     | '/signup'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/grants'
     | '/investments'
     | '/loans'
+    | '/login'
     | '/privacy'
     | '/profile'
     | '/signup'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/grants'
     | '/investments'
     | '/loans'
+    | '/login'
     | '/privacy'
     | '/profile'
     | '/signup'
@@ -335,6 +347,7 @@ export interface RootRouteChildren {
   GrantsRoute: typeof GrantsRoute
   InvestmentsRoute: typeof InvestmentsRoute
   LoansRoute: typeof LoansRoute
+  LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   SignupRoute: typeof SignupRoute
@@ -394,6 +407,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loans': {
@@ -571,6 +591,7 @@ const rootRouteChildren: RootRouteChildren = {
   GrantsRoute: GrantsRoute,
   InvestmentsRoute: InvestmentsRoute,
   LoansRoute: LoansRoute,
+  LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   SignupRoute: SignupRoute,
