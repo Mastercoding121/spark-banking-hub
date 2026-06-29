@@ -2,18 +2,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Resend } from "resend";
 import { db } from "./firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  deleteDoc,
-  updateDoc,
-  query,
-  where,
-  getDocs,
-  serverTimestamp,
-} from "firebase/firestore";
+import { getFirebaseAdmin } from "./firebase-admin";
+import admin from "firebase-admin";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 
@@ -21,17 +11,30 @@ function generateCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-// Helper to ensure we have db
+// In-memory storage for fallback mode (persists across calls in same process)
+const inMemoryOtpCodes = new Map();
+const inMemoryUsers = new Map();
+
+// Helper to get appropriate database (Admin SDK on server, Client SDK on client, or fallback)
 const getDb = () => {
-  if (!db) {
-    console.warn("Firebase Firestore not initialized! Using in-memory fallback.");
-    return { 
-      inMemory: true, 
-      otpCodes: new Map(),
-      users: new Map()
-    };
+  // First try Firebase Admin SDK (server-side)
+  const { db: adminDb } = getFirebaseAdmin();
+  if (adminDb) {
+    return { type: "admin" as const, db: adminDb };
   }
-  return db;
+
+  // Then try Firebase Client SDK (client-side)
+  if (db) {
+    return { type: "client" as const, db };
+  }
+
+  // Fall back to in-memory storage
+  console.warn("Firebase not initialized! Using in-memory fallback.");
+  return { 
+    type: "in-memory" as const, 
+    otpCodes: inMemoryOtpCodes,
+    users: inMemoryUsers
+  };
 };
 
 export const sendOtp = createServerFn({ method: "POST" })
@@ -45,7 +48,7 @@ export const sendOtp = createServerFn({ method: "POST" })
     const currentDb = getDb();
 
     // Upsert OTP code
-    if ("inMemory" in currentDb) {
+    if (currentDb.type === "in-memory") {
       currentDb.otpCodes.set(data.email, {
         email: data.email,
         code,
@@ -53,20 +56,22 @@ export const sendOtp = createServerFn({ method: "POST" })
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-    } else {
-      const otpDocRef = doc(currentDb, "otpCodes", data.email);
-      await setDoc(otpDocRef, {
+    } else if (currentDb.type === "admin") {
+      // Admin SDK (server-side)
+      const otpDocRef = currentDb.db.collection("otpCodes").doc(data.email);
+      await otpDocRef.set({
         email: data.email,
         code,
         expiresAt,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       console.warn("RESEND_API_KEY not set, skipping email send in demo mode");
+      console.log(`Demo mode: OTP code for ${data.email} is ${code}`);
       return { ok: true }; // Demo mode: don't fail if no Resend key
     }
 
@@ -94,7 +99,7 @@ export const sendOtp = createServerFn({ method: "POST" })
           </tr>
           <tr>
             <td style="padding:40px 40px 32px;">
-              <p style="margin:0 0 8px;color:rgba(255,255,255,0.5);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;">Identity Verification</p>
+              <p style="margin:0 0 8px;color:rgba(255,255,255,0.5);font-size:12px;letter-spacing:0.3em;text-transform:uppercase;">Identity Verification</p>
               <h2 style="margin:0 0 16px;color:#ffffff;font-size:24px;font-weight:700;">Your one-time code</h2>
               <p style="margin:0 0 28px;color:rgba(255,255,255,0.6);font-size:15px;line-height:1.6;">
                 Hi${data.name ? ` ${data.name.split(" ")[0]}` : ""},<br/>
@@ -137,6 +142,7 @@ export const sendOtp = createServerFn({ method: "POST" })
     if (error) {
       console.error("Resend error:", error);
       // Don't fail in demo mode
+      console.log(`Demo mode: OTP code for ${data.email} is ${code}`);
       return { ok: true };
     }
 
@@ -153,28 +159,34 @@ export const verifyOtp = createServerFn({ method: "POST" })
     const currentDb = getDb();
     let otpData: any = null;
 
-    if ("inMemory" in currentDb) {
+    if (currentDb.type === "in-memory") {
       otpData = currentDb.otpCodes.get(data.email);
       if (!otpData) throw new Error("No code found. Please request a new one.");
-    } else {
-      const otpDocRef = doc(currentDb, "otpCodes", data.email);
-      const otpDoc = await getDoc(otpDocRef);
-      if (!otpDoc.exists()) throw new Error("No code found. Please request a new one.");
+    } else if (currentDb.type === "admin") {
+      // Admin SDK (server-side)
+      const otpDocRef = currentDb.db.collection("otpCodes").doc(data.email);
+      const otpDoc = await otpDocRef.get();
+      if (!otpDoc.exists) throw new Error("No code found. Please request a new one.");
       otpData = otpDoc.data();
     }
 
-    if (new Date(otpData.expiresAt.toDate ? otpData.expiresAt.toDate() : otpData.expiresAt) < new Date()) {
-      if ("inMemory" in currentDb) {
+    // Check if code is expired
+    const expiresAtDate = otpData?.expiresAt?.toDate ? otpData.expiresAt.toDate() : new Date(otpData?.expiresAt);
+    if (expiresAtDate < new Date()) {
+      // Delete expired code
+      if (currentDb.type === "in-memory") {
         currentDb.otpCodes.delete(data.email);
-      } else {
-        const otpDocRef = doc(currentDb, "otpCodes", data.email);
-        await deleteDoc(otpDocRef);
+      } else if (currentDb.type === "admin") {
+        await currentDb.db.collection("otpCodes").doc(data.email).delete();
       }
       throw new Error("Code expired. Please request a new one.");
     }
-    if (data.code !== otpData.code) throw new Error("Incorrect code. Please try again.");
 
-    if ("inMemory" in currentDb) {
+    // Check if code is correct
+    if (data.code !== otpData?.code) throw new Error("Incorrect code. Please try again.");
+
+    // Code is valid: delete it and mark user as verified
+    if (currentDb.type === "in-memory") {
       currentDb.otpCodes.delete(data.email);
       // Mark user as verified in in-memory db
       for (let [id, user] of currentDb.users) {
@@ -182,20 +194,19 @@ export const verifyOtp = createServerFn({ method: "POST" })
           currentDb.users.set(id, { ...user, verified: true, updatedAt: new Date() });
         }
       }
-    } else {
-      const otpDocRef = doc(currentDb, "otpCodes", data.email);
-      await deleteDoc(otpDocRef);
+    } else if (currentDb.type === "admin") {
+      // Delete OTP doc
+      await currentDb.db.collection("otpCodes").doc(data.email).delete();
       // Mark user as verified
-      const userQuery = query(collection(currentDb, "users"), where("email", "==", data.email));
-      const userSnap = await getDocs(userQuery);
+      const userQuery = currentDb.db.collection("users").where("email", "==", data.email);
+      const userSnap = await userQuery.get();
       if (!userSnap.empty) {
-        await updateDoc(userSnap.docs[0].ref, {
+        await userSnap.docs[0].ref.update({
           verified: true,
-          updatedAt: serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       }
     }
 
     return { ok: true };
   });
-
