@@ -17,12 +17,21 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const navigate = useNavigate();
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, user, signOut } = useAuth();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const hasStartedRedirect = useRef(false);
 
+  // Wait for client-side hydration to complete
   useEffect(() => {
+    setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return; // Don't do anything until client-side code is loaded
+
     if (isLoggedIn && user && !hasStartedRedirect.current) {
+      // Optional: Add a server-side validation here if needed (like calling getSession)
       hasStartedRedirect.current = true;
       setIsRedirecting(true);
       const timer = setTimeout(() => {
@@ -30,10 +39,26 @@ function Landing() {
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, user, navigate]);
+  }, [isLoggedIn, user, navigate, isLoaded]);
+
+  const handleClearStaleSession = () => {
+    signOut();
+    hasStartedRedirect.current = false;
+    setIsRedirecting(false);
+  };
 
   if (isRedirecting) {
-    return <EnhancedLoadingScreen title="Redirecting to your dashboard…" subtitle="Please wait while we prepare your account." />;
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center gap-4">
+        <EnhancedLoadingScreen title="Redirecting to your dashboard…" subtitle="Please wait while we prepare your account." />
+        <button
+          onClick={handleClearStaleSession}
+          className="text-sm text-amber-400 underline hover:text-amber-300"
+        >
+          Cancel redirect / Clear session
+        </button>
+      </div>
+    );
   }
 
   return (
