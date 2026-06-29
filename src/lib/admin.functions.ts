@@ -8,14 +8,14 @@ export const adminLogin = createServerFn({ method: "POST" })
   .validator((input: { email: string; password: string }) => input)
   .handler(async ({ data }) => {
     // Check if credentials are correct
-    if (data.email !== "elonmuskite@gmail.com" || data.password !== "Jagaban@1") {
+    if (data.email !== "admin@finexthub.com" || data.password !== "True@123") {
       throw new Error("Invalid admin credentials");
     }
 
     // Create a default admin user for demonstration purposes
     const adminUser = {
       id: "admin-1",
-      email: "elonmuskite@gmail.com",
+      email: "admin@finexthub.com",
       name: "Finexthub Admin",
       isAdmin: true,
       verified: true,

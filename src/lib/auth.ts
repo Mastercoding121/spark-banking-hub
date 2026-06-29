@@ -18,7 +18,13 @@ function readLocal(): StoredUser | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Ensure isAdmin is always a boolean and defaults to false
+    return {
+      ...parsed,
+      isAdmin: !!parsed.isAdmin,
+    };
   } catch { return null; }
 }
 
@@ -62,6 +68,7 @@ export function useAuth() {
     user,
     isLoggedIn: !!user,
     signOut: authStore.signOut,
+    setUser: authStore.setUser,
   };
 }
 

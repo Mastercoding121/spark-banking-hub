@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
+import { useServerFn } from "@tanstack/react-start";
+import { getSession } from "@/lib/user.functions";
 import { PublicLayout } from "@/components/PublicLayout";
 import { EnhancedLoadingScreen } from "@/components/EnhancedLoadingScreen";
 import { Smartphone, Globe, ShieldCheck, Zap, TrendingUp, MessageSquare, CreditCard, DollarSign, BarChart3 } from "lucide-react";
@@ -17,21 +19,46 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const navigate = useNavigate();
-  const { isLoggedIn, user, signOut } = useAuth();
+  const { isLoggedIn, user, signOut, setUser } = useAuth();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
   const hasStartedRedirect = useRef(false);
+  const getSessionFn = useServerFn(getSession);
 
   // Wait for client-side hydration to complete
   useEffect(() => {
     setIsLoaded(true);
   }, []);
 
+  // Validate stored user with server
   useEffect(() => {
-    if (!isLoaded) return; // Don't do anything until client-side code is loaded
+    if (!isLoaded) return;
+    async function validateSession() {
+      try {
+        const serverUser = await getSessionFn();
+        if (serverUser) {
+          // Update local state with server user
+          if (!user || user.id !== serverUser.id) {
+            setUser(serverUser);
+          }
+        } else {
+          // No server session, clear local storage
+          signOut();
+        }
+      } catch (e) {
+        signOut();
+      } finally {
+        setIsValidating(false);
+      }
+    }
+    validateSession();
+  }, [isLoaded, getSessionFn, user, setUser, signOut]);
+
+  useEffect(() => {
+    if (!isLoaded || isValidating) return; // Don't redirect until validation is done
 
     if (isLoggedIn && user && !hasStartedRedirect.current) {
-      // Optional: Add a server-side validation here if needed (like calling getSession)
       hasStartedRedirect.current = true;
       setIsRedirecting(true);
       const timer = setTimeout(() => {
@@ -39,7 +66,7 @@ function Landing() {
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, user, navigate, isLoaded]);
+  }, [isLoggedIn, user, navigate, isLoaded, isValidating]);
 
   const handleClearStaleSession = () => {
     signOut();

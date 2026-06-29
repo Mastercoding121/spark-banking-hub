@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { holderStore } from "@/lib/store";
 import { authStore, useAuth } from "@/lib/auth";
-import { signIn } from "@/lib/user.functions";
+import { signIn, getSession } from "@/lib/user.functions";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PublicLayout } from "@/components/PublicLayout";
 import { EnhancedLoadingScreen } from "@/components/EnhancedLoadingScreen";
@@ -20,17 +20,41 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, user, setUser, signOut } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
   const hasStartedRedirect = useRef(false);
 
   const signInFn = useServerFn(signIn);
+  const getSessionFn = useServerFn(getSession);
+
+  // Validate stored user with server on load
+  useEffect(() => {
+    async function validateSession() {
+      try {
+        const serverUser = await getSessionFn();
+        if (serverUser) {
+          if (!user || user.id !== serverUser.id) {
+            setUser(serverUser);
+          }
+        } else {
+          signOut();
+        }
+      } catch (e) {
+        signOut();
+      } finally {
+        setIsValidating(false);
+      }
+    }
+    validateSession();
+  }, [getSessionFn, user, setUser, signOut]);
 
   useEffect(() => {
+    if (isValidating) return;
     if (isLoggedIn && user && !hasStartedRedirect.current) {
       hasStartedRedirect.current = true;
       setIsRedirecting(true);
@@ -39,7 +63,7 @@ function Login() {
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, user, navigate]);
+  }, [isLoggedIn, user, navigate, isValidating]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +78,8 @@ function Login() {
     finally { setBusy(false); }
   };
 
-  if (isRedirecting) {
-    return <EnhancedLoadingScreen title="Redirecting to your dashboard…" subtitle="Please wait while we prepare your account." />;
+  if (isValidating || isRedirecting) {
+    return <EnhancedLoadingScreen title="Loading…" subtitle="Please wait while we prepare your account." />;
   }
 
   return (
