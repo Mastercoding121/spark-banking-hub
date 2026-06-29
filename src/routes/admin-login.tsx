@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminLogin } from "@/lib/admin.functions";
 import { authStore } from "@/lib/auth";
 import { holderStore } from "@/lib/store";
 import { PublicLayout } from "@/components/PublicLayout";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+
+const ADMIN_EMAIL_KEY = "fnx.admin.email.v1";
 
 export const Route = createFileRoute("/admin-login")({
   head: () => ({
@@ -17,11 +19,24 @@ export const Route = createFileRoute("/admin-login")({
 });
 
 function AdminLoginPage() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailField, setShowEmailField] = useState(true);
   const loginFn = useServerFn(adminLogin);
   const navigate = useNavigate();
+
+  // Load cached email on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cachedEmail = localStorage.getItem(ADMIN_EMAIL_KEY);
+      if (cachedEmail) {
+        setEmail(cachedEmail);
+        setShowEmailField(false);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +44,23 @@ function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const adminUser = await loginFn({ data: { password } });
+      const adminUser = await loginFn({ data: { email, password } });
       authStore.setUser(adminUser);
       holderStore.set(adminUser.name);
+      // Cache the admin email
+      localStorage.setItem(ADMIN_EMAIL_KEY, email);
       navigate({ to: "/admin" });
     } catch (err: any) {
       setError(err?.message || "Login failed");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUseDifferentEmail = () => {
+    localStorage.removeItem(ADMIN_EMAIL_KEY);
+    setEmail("");
+    setShowEmailField(true);
   };
 
   return (
@@ -58,6 +81,33 @@ function AdminLoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {showEmailField ? (
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-white/80">
+                  Admin Email
+                </span>
+                <input
+                  required
+                  type="email"
+                  value={email}
+                  autoComplete="email"
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-amber-300"
+                  placeholder="Enter admin email"
+                />
+              </label>
+            ) : (
+              <div className="flex items-center justify-between rounded-md border border-white/20 bg-white/5 px-3 py-2.5">
+                <span className="text-sm text-white">{email}</span>
+                <button
+                  type="button"
+                  onClick={handleUseDifferentEmail}
+                  className="text-xs text-amber-400 hover:text-amber-300"
+                >
+                  Change email
+                </button>
+              </div>
+            )}
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-white/80">
                 Admin Password
@@ -98,4 +148,3 @@ function AdminLoginPage() {
     </PublicLayout>
   );
 }
-

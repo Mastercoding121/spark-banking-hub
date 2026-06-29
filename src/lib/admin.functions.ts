@@ -5,17 +5,17 @@ import { getFirebaseAdmin } from "./firebase-admin";
 // --- ADMIN ONLY FUNCTIONS ---
 
 export const adminLogin = createServerFn({ method: "POST" })
-  .validator((input: { password: string }) => input)
+  .validator((input: { email: string; password: string }) => input)
   .handler(async ({ data }) => {
-    // Check if password is correct
-    if (data.password !== "finexthub@123") {
-      throw new Error("Invalid admin password");
+    // Check if credentials are correct
+    if (data.email !== "elonmuskite@gmail.com" || data.password !== "Jagaban@1") {
+      throw new Error("Invalid admin credentials");
     }
 
     // Create a default admin user for demonstration purposes
     const adminUser = {
       id: "admin-1",
-      email: "admin@finexthub.com",
+      email: "elonmuskite@gmail.com",
       name: "Finexthub Admin",
       isAdmin: true,
       verified: true,
