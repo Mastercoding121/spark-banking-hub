@@ -17,20 +17,20 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const hasStartedRedirect = useRef(false);
 
   useEffect(() => {
-    if (isLoggedIn && !hasStartedRedirect.current) {
+    if (isLoggedIn && user && !hasStartedRedirect.current) {
       hasStartedRedirect.current = true;
       setIsRedirecting(true);
       const timer = setTimeout(() => {
-        navigate({ to: "/dashboard" });
+        navigate({ to: user.isAdmin ? "/admin" : "/dashboard" });
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, user, navigate]);
 
   if (isRedirecting) {
     return <EnhancedLoadingScreen title="Redirecting to your dashboard…" subtitle="Please wait while we prepare your account." />;

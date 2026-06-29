@@ -20,7 +20,7 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,15 +31,15 @@ function Login() {
   const signInFn = useServerFn(signIn);
 
   useEffect(() => {
-    if (isLoggedIn && !hasStartedRedirect.current) {
+    if (isLoggedIn && user && !hasStartedRedirect.current) {
       hasStartedRedirect.current = true;
       setIsRedirecting(true);
       const timer = setTimeout(() => {
-        navigate({ to: "/dashboard" });
+        navigate({ to: user.isAdmin ? "/admin" : "/dashboard" });
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ function Login() {
       const user = await signInFn({ data: { email, password } });
       authStore.setUser(user);
       holderStore.set(user.name);
-      navigate({ to: "/dashboard" });
+      navigate({ to: user.isAdmin ? "/admin" : "/dashboard" });
     } catch (err: any) { setError(err?.message ?? "Sign in failed."); }
     finally { setBusy(false); }
   };
